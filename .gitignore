@@ -1,0 +1,4 @@
+/result
+/result-*
+.direnv/
+/tools/gen-ms-sources/.cache

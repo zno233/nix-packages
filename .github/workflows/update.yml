@@ -1,0 +1,85 @@
+name: Update packages
+
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-packages
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: cachix/install-nix-action@v31.11.1
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.34.8/install
+          extra_nix_config: |
+            accept-flake-config = false
+            builders =
+            experimental-features = nix-command flakes
+
+      - name: Update, check and push
+        run: |
+          set -u
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Inputs: nixpkgs only; fonts are vendored and refreshed by
+          # sync-fonts.yml from chinese-fonts-overlay.
+          nix flake update
+          if [ -n "$(git status --porcelain -- flake.lock)" ]; then
+            git add flake.lock
+            git commit -m "lock: update flake inputs"
+          fi
+
+          # Per-package updates; a single failure must not block the rest.
+          # nix-update ignores pre-releases by default; doona only publishes
+          # those, so it needs --version=unstable.
+          # honk couples the doona release tag, honk build tag and per-arch
+          # hashes — bumped by tools/update-honk from the release's own data.
+          # Apple font packages pin CDN dmg contents, which Apple replaces in
+          # place — tools/update-apple-fonts re-verifies the pins against the CDN.
+          status=0
+          ./tools/update-apple-fonts || status=1
+          for dir in packages/apps/*/; do
+            pkg=${dir%/}
+            pkg=${pkg##*/}
+            if [ "$pkg" = honk ]; then
+              ./tools/update-honk || status=1
+              continue
+            fi
+            if [ "$pkg" = doona ]; then
+              flags="--version=unstable"
+            else
+              flags=""
+            fi
+            nix run github:Mic92/nix-update -- --commit --flake $flags "$pkg" || status=1
+          done
+
+          # Nothing new? Skip the (expensive) rebuild checks entirely;
+          # the runner store is cold every run.
+          if [ "$(git rev-list --count '@{u}..HEAD')" -eq 0 ]; then
+            echo "No updates to push"
+            exit 0
+          fi
+
+          # Never push updates that fail evaluation or builds. `checks` is
+          # derived from packages/apps, so new apps are covered automatically.
+          check_ok=1
+          nix flake check --print-build-logs --no-update-lock-file --no-write-lock-file || check_ok=0
+
+          if [ "$check_ok" -eq 1 ]; then
+            git push
+          else
+            echo "::error::checks failed; updates were NOT pushed"
+            status=1
+          fi
+          exit "$status"

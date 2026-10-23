@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Update packages/apps/honk/package.nix from the newest Zakkaus/doona release.
+#
+# honk is pinned to the prebuilt honk-core archives bundled with a doona
+# release. Every doona release is a pre-release, so the GitHub "latest"
+# endpoint is unusable and the first entry of /releases is taken instead.
+# All data the package needs is on that release: the honk build tag from
+# HONK-SOURCE.txt, the glibc archive hashes from SHA256SUMS — so the update
+# is fully mechanical. Commits the bump when anything changed.
+#
+# Deps: bash, curl, jq, git, nix.
+set -euo pipefail
+
+here=$(cd "$(dirname "$0")" && pwd)
+pkg="$here/../packages/apps/honk/package.nix"
+repo=Zakkaus/doona
+
+release=$(sed -n 's/^  release = "\(.*\)";$/\1/p' "$pkg")
+latest=$(
+  curl -fsSL "https://api.github.com/repos/$repo/releases?per_page=1" |
+    jq -er 'map(select(.draft == false))[0].tag_name'
+)
+if [ "$latest" = "$release" ]; then
+  echo "honk: already tracking the latest doona release ($release)"
+  exit 0
+fi
+
+# the honk build tag (the package `version`), named by the release manifest
+version=$(
+  curl -fsSL "https://github.com/$repo/releases/download/$latest/HONK-SOURCE.txt" |
+    grep -m1 '^Source tag: ' | sed 's/^Source tag: //'
+)
+
+# glibc archive hashes per arch, from the same release's SHA256SUMS
+sums=$(curl -fsSL "https://github.com/$repo/releases/download/$latest/SHA256SUMS")
+x86=$(
+  grep -E '^ ?[0-9a-f]{64}  honk-core-debug-x86_64-unknown-linux-gnu\.tar\.gz$' \
+    <<< "$sums" | cut -d' ' -f1
+)
+aarch64=$(
+  grep -E '^ ?[0-9a-f]{64}  honk-core-debug-aarch64-unknown-linux-gnu\.tar\.gz$' \
+    <<< "$sums" | cut -d' ' -f1
+)
+
+# validate formats before rewriting the package (upstream-input sanity)
+[[ $latest =~ ^v[0-9A-Za-z.-]+$ ]]
+[[ $version =~ ^debug[0-9.]+\.native-api\.[0-9]+$ ]]
+[[ $x86 =~ ^[0-9a-f]{64}$ && $aarch64 =~ ^[0-9a-f]{64}$ ]]
+x86=$(nix hash to-sri --type sha256 "$x86")
+aarch64=$(nix hash to-sri --type sha256 "$aarch64")
+
+sed -i \
+  -e "s|^  release = .*;|  release = \"$latest\";|" \
+  -e "s|^  version = .*;|  version = \"$version\";|" \
+  -e "s|^    x86_64 = .*;|    x86_64 = \"$x86\";|" \
+  -e "s|^    aarch64 = .*;|    aarch64 = \"$aarch64\";|" \
+  "$pkg"
+
+git add -- "$pkg"
+if ! git diff --cached --quiet; then
+  git commit --quiet -m "honk: ${latest}: ${version}"
+  echo "honk: updated to $latest ($version)"
+fi

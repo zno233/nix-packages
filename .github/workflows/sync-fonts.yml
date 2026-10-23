@@ -1,0 +1,76 @@
+name: Sync fonts
+
+on:
+  schedule:
+    - cron: "47 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-fonts
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: cachix/install-nix-action@v31.11.1
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.34.8/install
+          extra_nix_config: |
+            accept-flake-config = false
+            builders =
+            experimental-features = nix-command flakes
+
+      - name: Fetch upstream
+        run: git clone --depth 1 https://github.com/brsvh/chinese-fonts-overlay /tmp/cfo
+
+      - name: Rsync vendor trees
+        # packages/fonts/<vendor> mirrors the upstream byte-for-byte, except
+        # the locally maintained apple/, zno/, and microsoft/ trees, which
+        # survive --delete via the excludes. tools/gen-ms-sources is local
+        # too (upstream has none): regenerate its sources.nix manually with
+        # tools/gen-ms-sources/gen.sh when the upstream microsoft tree
+        # changes.
+        #
+        # Upstream is not fully nixfmt-formatted, so run the repo formatter
+        # after every sync to keep the tree constant for review.
+        run: |
+          rsync -a --delete \
+            --exclude=/apple/ --exclude=/zno/ --exclude=/microsoft/ \
+            /tmp/cfo/packages/ packages/fonts/
+          nix fmt
+
+      - name: Detect changes
+        id: diff
+        run: |
+          git add -A
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit changes locally
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "sync: update font tree from chinese-fonts-overlay"
+
+      - name: Verify
+        # The runner store is cold every run, so only pay the font
+        # re-download cost when the tree actually changed. --no-build
+        # already evaluates every package output (including apple-fonts).
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          nix flake check --no-build --no-update-lock-file --no-write-lock-file
+          nix build .#windows-fonts .#zno-fonts --no-link --no-update-lock-file --no-write-lock-file
+
+      - name: Push
+        if: steps.diff.outputs.changed == 'true'
+        run: git push
