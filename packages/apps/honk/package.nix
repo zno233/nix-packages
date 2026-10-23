@@ -80,10 +80,11 @@ stdenv.mkDerivation {
     description = "Linux high-performance transparent proxy solution based on eBPF (prebuilt native-api build)";
     homepage = "https://github.com/Glassyiris/honk";
     license = lib.licenses.gpl3Only;
+    mainProgram = "honk";
+    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
     platforms = [
       "x86_64-linux"
       "aarch64-linux"
     ];
-    mainProgram = "honk";
   };
 }

@@ -12,6 +12,7 @@
   makeWrapper,
   copyDesktopItems,
   makeDesktopItem,
+  nix-update-script,
   # Network-accelerator environment-check tools (probed by upstream's
   # environment_check.sh; missing ones raise a "run environment_check.sh
   # in a terminal to install dependencies" dialog):
@@ -163,6 +164,8 @@ stdenv.mkDerivation (
       runHook postInstall
     '';
 
+    passthru.updateScript = nix-update-script { };
+
     preFixup = ''
       makeWrapper $out/opt/watt-toolkit/dotnet/dotnet $out/bin/watt-toolkit \
         --set DOTNET_ROOT $out/opt/watt-toolkit/dotnet \
@@ -183,8 +186,9 @@ stdenv.mkDerivation (
       changelog = "https://github.com/BeyondDimension/SteamTools/releases/tag/${finalAttrs.version}";
       license = lib.licenses.gpl3Only;
       mainProgram = "watt-toolkit";
-      platforms = [ "x86_64-linux" ];
       sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
+      # arm64 tgz appeared in the 3.0.0-rc series only; stable releases are x64
+      platforms = [ "x86_64-linux" ];
     };
   }
 )

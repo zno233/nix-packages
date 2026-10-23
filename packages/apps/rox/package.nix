@@ -95,8 +95,8 @@ stdenv.mkDerivation (finalAttrs: {
     changelog = "https://github.com/zealsprince/rox/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.agpl3Only;
     mainProgram = "rox";
+    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
     # only amd64 is published as a deb
     platforms = [ "x86_64-linux" ];
-    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
   };
 })

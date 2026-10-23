@@ -2,6 +2,7 @@
   lib,
   stdenv,
   fetchurl,
+  nix-update-script,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -28,10 +29,13 @@ stdenv.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
+  passthru.updateScript = nix-update-script { };
+
   meta = {
     description = "Web UI for the daeuniverse engines honk/dae native API";
     homepage = "https://github.com/Zakkaus/doona";
     license = lib.licenses.gpl3Only;
+    mainProgram = "doona";
     platforms = lib.platforms.all;
   };
 })

@@ -107,8 +107,10 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://fluxdown.zerx.dev";
     changelog = "https://github.com/zerx-lab/FluxDown/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.agpl3Only;
-    platforms = [ "x86_64-linux" ];
     mainProgram = "fluxdown";
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
+    # only linux-x64 desktop packages are published (CLI/Server ship more
+    # arches but are separate deliverables)
+    platforms = [ "x86_64-linux" ];
   };
 })

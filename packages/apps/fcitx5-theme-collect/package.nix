@@ -27,10 +27,10 @@ stdenvNoCC.mkDerivation {
     runHook postInstall
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Collection of fcitx5 themes";
     homepage = "https://github.com/zno233/fcitx5-theme-collect";
-    license = licenses.gpl3Only;
-    platforms = platforms.all;
+    license = lib.licenses.gpl3Only;
+    platforms = lib.platforms.all;
   };
 }
