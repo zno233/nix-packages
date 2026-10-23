@@ -15,6 +15,7 @@
 }:
 let
   inherit (lib)
+    elem
     makeScope
     mapAttrs'
     nameValuePair
@@ -111,6 +112,18 @@ let
     // {
       combine = link fontPackages "windows-fonts";
       combine' = link fontPackages;
+
+      # Edition aggregates, addressable as microsoftPackages.<name> as well
+      # as the top-level registration in overlays/fonts/aggregates.nix.
+      # Same split semantics: en-US lacks the SimHei/KaiTi/FangSong trio.
+      windows-fonts-zh-cn = link fontPackages "windows-fonts-zh-cn" (_: true);
+      windows-fonts-en-us = link fontPackages "windows-fonts-en-us" (
+        drv: !(elem drv [
+          packageScope.kaiti
+          packageScope.fangsong
+          packageScope.simhei
+        ])
+      );
     };
 in
 mapAttrs' (vendor: attrs: nameValuePair "${vendor}Packages" (mkVendorScope vendor attrs)) vendors

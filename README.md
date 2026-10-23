@@ -28,7 +28,10 @@ A repo to store personal nix packages.
 - Fonts live in `packages/fonts/<vendor>/<font>/package.nix` under a
   per-vendor `<vendor>Packages` scope, with one `<vendor>-fonts` aggregate
   bundle per vendor on top; scopes where a single font carries the vendor
-  are promoted as plain `pkgs.<font>` attributes.
+  are promoted as plain `pkgs.<font>` attributes. Windows editions are
+  additionally curated as `windows-fonts-zh-cn` (complete set, as shipped by
+  a zh-CN install) and `windows-fonts-en-us` (everything but the SimHei/
+  KaiTi/FangSong legacy trio an en-US image does not bundle).
 - `nixosModules.honk` configures the honk proxy engine service;
   `nixosModules.default` imports every module provided by this flake.
 

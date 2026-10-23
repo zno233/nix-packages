@@ -80,6 +80,20 @@ let
     harmonyos-sans-naskh-arabic-ui-vf
   ];
 
+  # Windows edition split. A stock en-US Windows 10/11 image ships the full
+  # CJK UI set (YaHei, SimSun, JhengHei, MingLiU-ExtB, Malgun, MS/Yu Gothic)
+  # for font fallback — the pjobson 2021-Windows-11 tree is an English build
+  # and still contains all of them. The only fonts it does not carry are the
+  # zh-CN legacy fonts SimHei, KaiTi, and FangSong, which the archive only
+  # provides from its Windows 7 directory. So `windows-fonts-en-us` is every
+  # microsoft package save those three, and `windows-fonts-zh-cn` is the
+  # complete set, i.e. what a zh-CN install effectively bundles.
+  windowsEnUsExcluded = with microsoftPackages; [
+    fangsong
+    kaiti
+    simhei
+  ];
+
   licenseIn = licenses: drv: elem (drv.meta.license or null) licenses;
 
   mkAggregate =
@@ -144,6 +158,16 @@ let
       name = "harmonyos-sans-vf-fonts";
       scope = huaweiPackages;
       predicate = drv: elem drv harmonyosSansVfPackages;
+    }
+    {
+      name = "windows-fonts-en-us";
+      scope = microsoftPackages;
+      predicate = drv: !(elem drv windowsEnUsExcluded);
+    }
+    {
+      name = "windows-fonts-zh-cn";
+      scope = microsoftPackages;
+      predicate = all;
     }
     {
       name = "tsangertype-gcu-fonts";
