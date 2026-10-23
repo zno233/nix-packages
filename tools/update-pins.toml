@@ -1,0 +1,114 @@
+# Update recipes for pins that nix-update cannot drive: content pinned
+# without a releasable version (rolling HEADs), or version/hash data spread
+# over several release assets. Executed by tools/update-pins.
+#
+# A rule lists specs in declaration order. Every spec is a fetch
+# (url: plain/JSON text; prefetch: nix flake prefetch), a derivation
+# (doc + json_path or regex, narrowed by validate / transform) or a pin
+# (pattern + value): pins capture their current value into the namespace
+# first and are rewritten once all values are known. Patterns are matched
+# per line; the captured group is replaced by template. For multi-file
+# rules (packages glob) each file is processed separately and all changed
+# files are committed together with the rule's commit message.
+#
+# Supported transforms live in tools/update-pins TRANSFORMS: sri (hex
+# sha256 -> SRI), dmghash (download URL -> SRI, cached per URL), short
+# (first 7 chars) and iso (timestamp -> YYYY-MM-DD UTC).
+
+[honk]
+package = "packages/apps/honk/package.nix"
+commit = "honk: {doona-tag}: {honk-tag}"
+
+[honk.doona-list]
+url = "https://api.github.com/repos/Zakkaus/doona/releases?per_page=1"
+json = true
+
+[honk.doona-tag]
+doc = "doona-list"
+json_path = "0.tag_name"
+validate = "^v[0-9A-Za-z.-]+$"
+
+[honk.doona-sums]
+url = "https://github.com/Zakkaus/doona/releases/download/{doona-tag}/SHA256SUMS"
+
+[honk.doona-source]
+url = "https://github.com/Zakkaus/doona/releases/download/{doona-tag}/HONK-SOURCE.txt"
+
+[honk.honk-tag]
+doc = "doona-source"
+regex = "^Source tag: (.*)$"
+validate = "^debug[0-9.]+\\.native-api\\.[0-9]+$"
+
+[honk.hash-x86_64]
+doc = "doona-sums"
+regex = "^ ?([0-9a-f]{64})  honk-core-debug-x86_64-unknown-linux-gnu\\.tar\\.gz$"
+transform = "sri"
+
+[honk.hash-aarch64]
+doc = "doona-sums"
+regex = "^ ?([0-9a-f]{64})  honk-core-debug-aarch64-unknown-linux-gnu\\.tar\\.gz$"
+transform = "sri"
+
+[honk.pin-release]
+pattern = '  release = "(.*)";'
+value = "{doona-tag}"
+
+[honk.pin-version]
+pattern = '  version = "(.*)";'
+value = "{honk-tag}"
+
+[honk.pin-hash-x86]
+pattern = '    x86_64 = "(.*)";'
+value = "{hash-x86_64}"
+
+[honk.pin-hash-aarch64]
+pattern = '    aarch64 = "(.*)";'
+value = "{hash-aarch64}"
+
+[fcitx5-theme-collect]
+package = "packages/apps/fcitx5-theme-collect/package.nix"
+commit = "fcitx5-theme-collect: {old.pin-rev} -> {head-sha}"
+
+[fcitx5-theme-collect.head-commit]
+url = "https://api.github.com/repos/zno233/fcitx5-theme-collect/commits/HEAD"
+json = true
+
+[fcitx5-theme-collect.head-sha]
+doc = "head-commit"
+json_path = "sha"
+validate = "[0-9a-f]{40}"
+transform = "short"
+
+[fcitx5-theme-collect.head-date]
+doc = "head-commit"
+json_path = "commit.committer.date"
+transform = "iso"
+
+[fcitx5-theme-collect.head-hash]
+prefetch = "github:zno233/fcitx5-theme-collect/{head-sha}"
+json_path = "hash"
+
+[fcitx5-theme-collect.pin-rev]
+pattern = '    rev = "(.*)";'
+value = "{head-sha}"
+
+[fcitx5-theme-collect.pin-version]
+pattern = '  version = "(.*)";'
+value = "0-unstable-{head-date}"
+
+[fcitx5-theme-collect.pin-hash]
+pattern = '    hash = "(.*)";'
+value = "{head-hash}"
+
+[apple]
+packages = "packages/fonts/apple/*/package.nix"
+commit = "apple-fonts: refresh dmg hashes ({changed})"
+
+[apple.pin-url]
+pattern = '    url = "(.*)";'
+value = "{pin-url}"
+validate = "^https://devimages-cdn\\.apple\\.com/design/resources/download/.*\\.dmg$"
+
+[apple.pin-hash]
+pattern = '    hash = "(.*)";'
+value = "{pin-url:dmghash}"

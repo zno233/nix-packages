@@ -50,8 +50,9 @@ upstream changes.
 ## CI
 
 - `check.yml`: `nix flake check` on push / PR
-- `update.yml`: daily flake.lock bump and package updates (apps via nix-update,
-  honk via `tools/update-honk`, apple-fonts dmg pins via `tools/update-apple-fonts`),
+- `update.yml`: daily flake.lock bump and package updates (apps via nix-update;
+  sources with no releasable version are pinned and refreshed through the
+  `tools/update-*` scripts),
   pushed only after a passing check
 - `sync-fonts.yml`: daily font-tree sync from upstream mirrors, local trees
   excluded, pushed only after a passing check

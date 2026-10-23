@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+"""Declarative pin refreshes for packages nix-update cannot drive.
+
+.pattern.hit takes the rules from tools/update-pins.toml alongside the
+script. A rule lists specs in declaration order; every spec is one of:
+
+  fetch    url = <template> (+ json, json_path)  — plain or JSON document
+           prefetch = <template> (+ json_path)   — `nix flake prefetch`
+  derive   doc = <key> + json_path | regex       — extract from a fetched doc
+  pin      pattern = <regex> + value = <template> — capture & rewrite
+
+All values live in one namespace joined rule→file; pinned captures make
+themselves available to later specs. Optional per-spec modifiers:
+
+  validate   = <regex>     fullmatch before applying (pre-transform)
+  transform  = sri | dmghash | short | iso   (add to TRANSFORMS to extend)
+
+After all values are known each pin is rewritten only if its value changed;
+the changed files of a rule are committed once with its formatted message.
+Any failure exits non-zero; the update workflow treats that as a failed
+sub-updater.
+
+Usage: tools/update-pins [rule ...]   (default: every rule)
+"""
+
+import glob
+import hashlib
+import json
+import re
+import subprocess
+import sys
+import tempfile
+import tomllib
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+
+TOKEN = re.compile(r"\{([\w-]+(?:\.[\w-]+)*)(?::(\w+))?\}")
+META = ("package", "packages", "commit")
+
+
+def log(msg: str) -> None:
+    print(msg, flush=True)
+
+
+def fail(msg: str) -> None:
+    raise RuntimeError(msg)
+
+
+def fetch(url: str, retries: int = 5) -> bytes:
+    last: Exception | None = None
+    for _ in range(retries):
+        try:
+            with urllib.request.urlopen(url, timeout=120) as resp:
+                return resp.read()
+        except Exception as err:  # noqa: BLE001
+            last = err
+    fail(f"could not fetch {url}: {last}")
+
+
+def sri(hex_digest: str) -> str:
+    return subprocess.run(
+        ["nix", "hash", "to-sri", "--type", "sha256", hex_digest],
+        check=True, capture_output=True, text=True,
+    ).stdout.strip()
+
+
+class Hasher:
+    """dmghash: download a URL once into a temp file (with retries), hash it."""
+
+    def __init__(self) -> None:
+        self.cache: dict[str, str] = {}
+
+    def sri_of(self, url: str) -> str:
+        if url in self.cache:
+            return self.cache[url]
+        with tempfile.NamedTemporaryFile() as tmp:
+            ok = False
+            for _ in range(5):
+                if subprocess.run(
+                    ["curl", "-fsSL", "--connect-timeout", "30", "-o", tmp.name, url],
+                    capture_output=True,
+                ).returncode == 0:
+                    ok = True
+                    break
+            if not ok:
+                fail(f"download failed after retries: {url}")
+            digest = hashlib.sha256(tmp.read()).hexdigest()
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            fail(f"bad sha256 for {url}")
+        self.cache[url] = sri(digest)
+        return self.cache[url]
+
+
+def iso_to_date(value: str) -> str:
+    stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return stamp.astimezone(timezone.utc).strftime("%Y-%m-%d")
+
+
+TRANSFORMS = {
+    "sri": lambda v, h: sri(v)
+    if re.fullmatch(r"[0-9a-f]{64}", v)
+    else fail(f"not a sha256 hex: {v}"),
+    "dmghash": lambda v, h: h.sri_of(v),
+    "short": lambda v, h: v[:7],
+    "iso": lambda v, h: iso_to_date(v),
+}
+
+
+def render(template: str, ns: dict, hasher: Hasher) -> str:
+    def token(match: re.Match) -> str:
+        key, kind = match.group(1), match.group(2)
+        if key not in ns:
+            fail(f"unknown value in template: {match.group(0)}")
+        value = ns[key]
+        if kind:
+            if kind not in TRANSFORMS:
+                fail(f"unknown transform: {kind}")
+            value = TRANSFORMS[kind](value, hasher)
+        return str(value)
+
+    return TOKEN.sub(token, template)
+
+
+def json_path(node, path: str):
+    for part in path.split("."):
+        node = node[int(part)] if re.fullmatch(r"\d+", part) else node[part]
+    return node
+
+
+def check(spec: dict, key: str, value: str, hasher: Hasher) -> str:
+    """validate + transform a fresh value into its final namespace form."""
+    validate = spec.get("validate")
+    if validate and not re.fullmatch(validate, value):
+        fail(f"{key} failed validation: {value}")
+    trans = spec.get("transform")
+    if trans:
+        if trans not in TRANSFORMS:
+            fail(f"unknown transform: {trans}")
+        value = TRANSFORMS[trans](value, hasher)
+    return value
+
+
+class Rule:
+    def __init__(self, name: str, rule: dict, hasher: Hasher) -> None:
+        self.name = name
+        self.rule = rule
+        self.hasher = hasher
+
+    def files(self) -> list[str]:
+        if "package" in self.rule:
+            return [str(root / self.rule["package"])]
+        return sorted(glob.glob(str(root / self.rule["packages"])))
+
+    def process(self, pkg: str, ns: dict, old: dict) -> bool:
+        path = Path(pkg)
+        text = path.read_text()
+        local_ns = dict(ns)
+        pins: dict[str, dict] = {}
+
+        for key, spec in self.rule.items():
+            if key in META:
+                continue
+            if "url" in spec or "prefetch" in spec:
+                if "url" in spec:
+                    data = fetch(render(spec["url"], local_ns, self.hasher))
+                    value = json.loads(data) if spec.get("json") else data.decode()
+                else:
+                    ref = render(spec["prefetch"], local_ns, self.hasher)
+                    out = subprocess.run(
+                        ["nix", "flake", "prefetch", "--json", ref],
+                        check=True, capture_output=True, text=True,
+                    ).stdout
+                    value = json.loads(out)
+                if spec.get("json_path"):
+                    # the spec yields a scalar value: extract, validate, transform
+                    value = check(
+                        spec, key,
+                        str(json_path(value, spec["json_path"])),
+                        self.hasher,
+                    )
+                    local_ns[key] = value
+                else:
+                    # the spec yields a document for later derives: keep it raw
+                    local_ns[key] = value
+            elif "pattern" in spec:
+                m = re.search(f"^{spec['pattern']}$", text, re.MULTILINE)
+                if not m:
+                    fail(f"{self.name}: pin pattern not found: {key}")
+                old[key] = m.group(1)
+                local_ns[key] = old[key]
+                pins[key] = spec
+            elif "doc" in spec:
+                source = local_ns[spec["doc"]]
+                if "json_path" in spec:
+                    value = json_path(source, spec["json_path"])
+                else:
+                    m = re.search(spec["regex"], source, re.MULTILINE)
+                    if not m:
+                        fail(f"{self.name}: regex failed for {key}")
+                    value = m.group(1)
+                value = check(spec, key, str(value), self.hasher)
+                local_ns[key] = value
+            else:
+                fail(f"{self.name}: unusable spec: {key}")
+
+        changed = False
+        for key, spec in pins.items():
+            new = render(spec["value"], local_ns, self.hasher)
+            m = re.search(f"^{spec['pattern']}$", text, re.MULTILINE)
+            if new == m.group(1):
+                continue
+            text = text[:m.start(1)] + new + text[m.end(1):]
+            changed = True
+        if changed:
+            path.write_text(text)
+            ns.update(local_ns)
+        return changed
+
+
+root = Path(__file__).resolve().parent.parent
+
+
+def load_rules(path: Path) -> dict:
+    raw = tomllib.loads(path.read_text())
+    rules = {}
+    for name, rule in raw.items():
+        if set(META) & set(rule) == set():
+            fail(f"rule {name} lacks package/packages")
+        rules[name] = rule
+    return rules
+
+
+RULES = load_rules(root / "tools" / "update-pins.toml")
+
+
+def main() -> None:
+    hasher = Hasher()
+    selected = sys.argv[1:] or list(RULES)
+    status = 0
+    for name in selected:
+        if name not in RULES:
+            log(f"unknown rule: {name}")
+            status = 1
+            continue
+        rule = RULES[name]
+        try:
+            rule_runner = Rule(name, rule, hasher)
+            ns: dict[str, str] = {}
+            old: dict[str, str] = {}
+            changed_files = []
+            for pkg in rule_runner.files():
+                if rule_runner.process(pkg, ns, old):
+                    changed_files.append(pkg)
+            if not changed_files:
+                log(f"{name}: up to date")
+                continue
+            subprocess.run(["git", "add", "--", *changed_files], check=True, cwd=root)
+            names = sorted({Path(pkg).parent.name for pkg in changed_files})
+            commit_ns = {
+                **ns,
+                **{f"old.{k}": v for k, v in old.items()},
+                "changed": " ".join(names),
+            }
+            commit = render(rule["commit"], commit_ns, hasher)
+            # pathspec commit: only this rule's files, never unrelated index state
+            subprocess.run(
+                ["git", "commit", "--quiet", "-m", commit, "--", *changed_files],
+                check=True, cwd=root,
+            )
+            log(f"{name}: refreshed pins ({', '.join(names)})")
+        except Exception as err:  # noqa: BLE001
+            log(f"{name}: FAILED: {err}")
+            status = 1
+    sys.exit(status)
+
+
+if __name__ == "__main__":
+    main()

@@ -45,6 +45,8 @@ jobs:
           # those, so it needs --version=unstable.
           # honk couples the doona release tag, honk build tag and per-arch
           # hashes — bumped by tools/update-honk from the release's own data.
+          # fcitx5-theme-collect pins a raw HEAD commit on tagless upstream —
+          # tools/update-fcitx5-theme-collect re-derives it.
           # Apple font packages pin CDN dmg contents, which Apple replaces in
           # place — tools/update-apple-fonts re-verifies the pins against the CDN.
           status=0
@@ -54,6 +56,10 @@ jobs:
             pkg=${pkg##*/}
             if [ "$pkg" = honk ]; then
               ./tools/update-honk || status=1
+              continue
+            fi
+            if [ "$pkg" = fcitx5-theme-collect ]; then
+              ./tools/update-fcitx5-theme-collect || status=1
               continue
             fi
             if [ "$pkg" = doona ]; then
