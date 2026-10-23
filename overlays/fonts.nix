@@ -11,6 +11,8 @@
 #
 #   overlay   : the fonts overlay (final: prev: ...)
 #   aggregateNames : [ String ], static list of aggregate names
+#   flattenNames   : [ String ], static list of vendor packages promoted to
+#                    the plain package set
 #
 {
   lib,
@@ -18,17 +20,17 @@
   projectRoot,
 }:
 let
-  # `aggregateNames` is a static manifest (see overlays/fonts/aggregates.nix):
-  # evaluating it must not force any scope value, so the manifest-only import
-  # runs with `scopes = null`.
-  aggregateNames =
-    (import ./fonts/aggregates.nix {
-      inherit lib;
-      scopes = null;
-    }).names;
+  # `aggregateNames`/`flattenNames` are a static manifest (see
+  # overlays/fonts/aggregates.nix): evaluating it must not force any scope
+  # value, so the manifest-only import runs with `scopes = null`.
+  manifest = import ./fonts/aggregates.nix {
+    inherit lib;
+    scopes = null;
+  };
 in
 {
-  inherit aggregateNames;
+  inherit (manifest) flattenNames;
+  aggregateNames = manifest.names;
 
   overlay =
     final: prev:
@@ -86,7 +88,10 @@ in
         inherit lib scopes;
       };
 
+      # Vendor packages promoted past their scope, addressed as `pkgs.<name>`.
+      flat = lib.mapAttrs (name: path: lib.getAttrFromPath path scopes) aggregates.flatPaths;
+
       compat = import ./fonts/compat.nix { inherit lib; };
     in
-    scopes // aggregates.packages // compat // { inherit lib; };
+    scopes // aggregates.packages // flat // compat // { inherit lib; };
 }

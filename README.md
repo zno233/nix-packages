@@ -27,7 +27,8 @@ A repo to store personal nix packages.
   adding one is just a new directory.
 - Fonts live in `packages/fonts/<vendor>/<font>/package.nix` under a
   per-vendor `<vendor>Packages` scope, with one `<vendor>-fonts` aggregate
-  bundle per vendor on top.
+  bundle per vendor on top; scopes where a single font carries the vendor
+  are promoted as plain `pkgs.<font>` attributes.
 - `nixosModules.honk` configures the honk proxy engine service;
   `nixosModules.default` imports every module provided by this flake.
 
@@ -51,8 +52,7 @@ upstream changes.
 
 - `check.yml`: `nix flake check` on push / PR
 - `update.yml`: daily flake.lock bump and package updates (apps via nix-update;
-  sources with no releasable version are pinned and refreshed through the
-  `tools/update-*` scripts),
+  pins without a releasable version follow `tools/update-pins.toml` recipes),
   pushed only after a passing check
 - `sync-fonts.yml`: daily font-tree sync from upstream mirrors, local trees
   excluded, pushed only after a passing check

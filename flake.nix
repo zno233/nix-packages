@@ -50,7 +50,11 @@
       # which exports both their derivations and a static name manifest.
       # `lib.getAttrs` fails loudly if the manifest and the overlaid package
       # set ever drift apart, so no nixpkgs name diffing is needed here.
-      fontAggregates = lib.mapAttrs (_: pkgs: lib.getAttrs overlayManifest.aggregateNames pkgs) pkgsFor;
+      # Vendor packages promoted to the plain set are listed in the same
+      # manifest (flattenNames) and merged in the same way.
+      fontPackages = lib.mapAttrs (
+        _: pkgs: lib.getAttrs (overlayManifest.aggregateNames ++ overlayManifest.flattenNames) pkgs
+      ) pkgsFor;
 
       # modules/ is partitioned by flake output key (nixosModules today,
       # e.g. homeManagerModules later) for symmetric growth.
@@ -77,7 +81,7 @@
       # `legacyPackages` over applying the overlay themselves.
       legacyPackages = pkgsFor;
 
-      packages = lib.mapAttrs (system: _: appPackages.${system} // fontAggregates.${system}) pkgsFor;
+      packages = lib.mapAttrs (system: _: appPackages.${system} // fontPackages.${system}) pkgsFor;
 
       # Build the local applications (these are what `nix flake check`
       # builds). Font aggregates are excluded on purpose: building one

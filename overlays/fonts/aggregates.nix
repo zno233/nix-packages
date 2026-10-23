@@ -178,7 +178,26 @@ let
   # Static manifest: only the attrset keys and the record names are forced
   # here, so this line is safe to evaluate with a stubbed `scopes`.
   names = lib.attrNames allOfScope ++ lib.catAttrs "name" filteredOfScope;
+
+  # Packages promoted out of their vendor scope to the plain package set,
+  # for scopes where a single package makes the scope layer pointless
+  # (`pkg.pkgs.asuka-fonts` installs like every other package). The paths
+  # are resolved against the scopes when the overlay runs; a static name
+  # list is all the manifest needs to stay stub-evaluable.
+  flatPaths = {
+    asuka-fonts = [
+      "znoPackages"
+      "asuka-fonts"
+    ];
+  };
+
+  flattenNames = lib.attrNames flatPaths;
 in
 {
-  inherit packages names;
+  inherit
+    packages
+    names
+    flatPaths
+    flattenNames
+    ;
 }

@@ -4,6 +4,8 @@
 #   overlays.default : the composed font + apps overlay (final: prev: ...)
 #   aggregateNames   : static list of the aggregate names added by the fonts
 #                      overlay, consumed by flake.nix
+#   flattenNames     : static list of the vendor packages promoted to the
+#                      plain package set, likewise consumed by flake.nix
 #
 # The overlay itself glues the vendored font scopes/aggregates together with
 # the locally maintained application packages.
@@ -23,5 +25,5 @@ in
     (import ./apps.nix { inherit lib projectRoot; })
   ];
 
-  inherit (fonts) aggregateNames;
+  inherit (fonts) aggregateNames flattenNames;
 }
