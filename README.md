@@ -12,7 +12,7 @@ A repo to store personal nix packages.
     nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
-        nix-packages.nixosModules.honk
+        nix-packages.nixosModules.default
         { nixpkgs.overlays = [ nix-packages.overlays.default ]; }
       ];
     };
