@@ -3,8 +3,12 @@
 # over several release assets. Executed by tools/update-pins.
 #
 # A rule lists specs in declaration order. Every spec is a fetch
-# (url: plain/JSON text; prefetch: nix flake prefetch), a derivation
-# (doc + json_path or regex, narrowed by validate / transform) or a pin
+# (url: plain/JSON text; prefetch: nix flake prefetch), a find
+# (doc + tag regex and/or asset name(s): first item of a listed doc
+# matching them, e.g. the newest release of a channel that still ships
+# the assets), a derivation (doc + json_path or regex, narrowed by
+# validate / transform; the regex is a token template — unresolvable
+# braces such as {64} quantifiers stay literal) or a pin
 # (pattern + value): pins capture their current value into the namespace
 # first and are rewritten once all values are known. Patterns are matched
 # per line; the captured group is replaced by template. For multi-file
@@ -16,54 +20,70 @@
 # (first 7 chars) and iso (timestamp -> YYYY-MM-DD UTC).
 
 [honk]
-package = "packages/apps/honk/package.nix"
-commit = "honk: {doona-tag}: {honk-tag}"
+package = "packages/apps/honk/packages/honk.nix"
+commit = "honk: {old.pin-version} -> {honk-tag}"
 
-[honk.doona-list]
-url = "https://api.github.com/repos/Zakkaus/doona/releases?per_page=1"
+# honk follows its own repo (daeuniverse/honk; Zakkaus/doona releases no
+# longer carry the honk builds). Only SemVer tags are tracked — rolling
+# "debug"-tagged release channels and CI test tags are skipped. On glibc
+# only the -full and -stock-full assets exist; both carry both APIs and
+# the embedded doona UI (musl builds are static and split per API — not
+# packaged).
+[honk.honk-releases]
+url = "https://api.github.com/repos/daeuniverse/honk/releases?per_page=100"
 json = true
 
-[honk.doona-tag]
-doc = "doona-list"
-json_path = "0.tag_name"
-validate = "^v[0-9A-Za-z.-]+$"
-
-[honk.doona-sums]
-url = "https://github.com/Zakkaus/doona/releases/download/{doona-tag}/SHA256SUMS"
-
-[honk.doona-source]
-url = "https://github.com/Zakkaus/doona/releases/download/{doona-tag}/HONK-SOURCE.txt"
+[honk.honk-release]
+find = "honk-releases"
+tag = "^v[0-9][0-9A-Za-z.-]*$"
 
 [honk.honk-tag]
-doc = "doona-source"
-regex = "^Source tag: (.*)$"
-validate = "^debug[0-9.]+\\.native-api\\.[0-9]+$"
+doc = "honk-release"
+json_path = "tag_name"
+validate = "^v[0-9][0-9A-Za-z.-]*$"
+
+[honk.sums]
+url = "https://github.com/daeuniverse/honk/releases/download/{honk-tag}/SHA256SUMS"
 
 [honk.hash-x86_64]
-doc = "doona-sums"
-regex = "^ ?([0-9a-f]{64})  honk-core-debug-x86_64-unknown-linux-gnu\\.tar\\.gz$"
+doc = "sums"
+regex = "^ ?([0-9a-f]+)  honk-core-{honk-tag}-x86_64-unknown-linux-gnu-full\\.tar\\.gz$"
 transform = "sri"
 
 [honk.hash-aarch64]
-doc = "doona-sums"
-regex = "^ ?([0-9a-f]{64})  honk-core-debug-aarch64-unknown-linux-gnu\\.tar\\.gz$"
+doc = "sums"
+regex = "^ ?([0-9a-f]+)  honk-core-{honk-tag}-aarch64-unknown-linux-gnu-full\\.tar\\.gz$"
 transform = "sri"
 
-[honk.pin-release]
-pattern = '  release = "(.*)";'
-value = "{doona-tag}"
+[honk.hash-stock-x86_64]
+doc = "sums"
+regex = "^ ?([0-9a-f]+)  honk-core-{honk-tag}-x86_64-unknown-linux-gnu-stock-full\\.tar\\.gz$"
+transform = "sri"
+
+[honk.hash-stock-aarch64]
+doc = "sums"
+regex = "^ ?([0-9a-f]+)  honk-core-{honk-tag}-aarch64-unknown-linux-gnu-stock-full\\.tar\\.gz$"
+transform = "sri"
 
 [honk.pin-version]
 pattern = '  version = "(.*)";'
 value = "{honk-tag}"
 
 [honk.pin-hash-x86]
-pattern = '    x86_64 = "(.*)";'
+pattern = '  hashes\.x86_64-linux\.full = "(.*)";'
 value = "{hash-x86_64}"
 
 [honk.pin-hash-aarch64]
-pattern = '    aarch64 = "(.*)";'
+pattern = '  hashes\.aarch64-linux\.full = "(.*)";'
 value = "{hash-aarch64}"
+
+[honk.pin-hash-stock-x86]
+pattern = '  hashes\.x86_64-linux\.stock = "(.*)";'
+value = "{hash-stock-x86_64}"
+
+[honk.pin-hash-stock-aarch64]
+pattern = '  hashes\.aarch64-linux\.stock = "(.*)";'
+value = "{hash-stock-aarch64}"
 
 [fcitx5-theme-collect]
 package = "packages/apps/fcitx5-theme-collect/package.nix"

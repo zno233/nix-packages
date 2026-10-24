@@ -6,6 +6,10 @@ script. A rule lists specs in declaration order; every spec is one of:
 
   fetch    url = <template> (+ json, json_path)  — plain or JSON document
            prefetch = <template> (+ json_path)   — `nix flake prefetch`
+  find     doc = <key> + tag = <regex> and/or asset = <name|array>
+           — first item of a list doc matching them (tag fullmatches,
+           assets carry every given name), e.g. the newest release of a
+           companion channel that still ships the assets
   derive   doc = <key> + json_path | regex       — extract from a fetched doc
   pin      pattern = <regex> + value = <template> — capture & rewrite
 
@@ -107,10 +111,14 @@ TRANSFORMS = {
 }
 
 
-def render(template: str, ns: dict, hasher: Hasher) -> str:
+def render(template: str, ns: dict, hasher: Hasher, lenient: bool = False) -> str:
     def token(match: re.Match) -> str:
         key, kind = match.group(1), match.group(2)
         if key not in ns:
+            if lenient:
+                # regex templates: braces that are no reachable value
+                # (e.g. {64} quantifiers) stay literal
+                return match.group(0)
             fail(f"unknown value in template: {match.group(0)}")
         value = ns[key]
         if kind:
@@ -183,6 +191,27 @@ class Rule:
                 else:
                     # the spec yields a document for later derives: keep it raw
                     local_ns[key] = value
+            elif "find" in spec:
+                source = local_ns[spec["find"]]
+                if not isinstance(source, list):
+                    fail(f"{self.name}: find expects a list doc: {key}")
+                tag = spec.get("tag")
+                asset = spec.get("asset")
+                wanted = [asset] if isinstance(asset, str) else list(asset or [])
+                for item in source:
+                    if tag and not re.fullmatch(tag, str(item.get("tag_name", ""))):
+                        continue
+                    have = {a.get("name") for a in item.get("assets", [])}
+                    if all(w in have for w in wanted):
+                        break
+                else:
+                    crit = []
+                    if tag:
+                        crit.append(f"tag {tag}")
+                    if wanted:
+                        crit.append(f"assets {', '.join(wanted)}")
+                    fail(f"{self.name}: no doc matches {'; '.join(crit) or 'anything'}")
+                local_ns[key] = item
             elif "pattern" in spec:
                 m = re.search(f"^{spec['pattern']}$", text, re.MULTILINE)
                 if not m:
@@ -195,7 +224,10 @@ class Rule:
                 if "json_path" in spec:
                     value = json_path(source, spec["json_path"])
                 else:
-                    m = re.search(spec["regex"], source, re.MULTILINE)
+                    m = re.search(
+                        render(spec["regex"], local_ns, self.hasher, lenient=True),
+                        source, re.MULTILINE,
+                    )
                     if not m:
                         fail(f"{self.name}: regex failed for {key}")
                     value = m.group(1)

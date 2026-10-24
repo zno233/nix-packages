@@ -43,9 +43,13 @@ jobs:
           # Per-package updates; a single failure must not block the rest.
           # nix-update ignores pre-releases by default; doona only publishes
           # those, so it needs --version=unstable.
-          # Some pins have no releasable version for nix-update (rolling HEAD
-          # commits, multi-asset release data, CDN-replaced dmg content) —
-          # those are refreshed through tools/update-pins per its TOML recipes.
+          # honk/honk-stock share one version and their atom feed ranks the
+          # rolling "debug" CI channel above SemVer releases; both flavors
+          # are pinned by one tools/update-pins rule.
+          # Some remaining pins have no releasable version for nix-update
+          # (rolling HEAD commits, multi-asset release data, CDN-replaced
+          # dmg content) — those are refreshed through tools/update-pins
+          # per its TOML recipes.
           status=0
           ./tools/update-pins || status=1
           for dir in packages/apps/*/; do
@@ -53,6 +57,8 @@ jobs:
             pkg=${pkg##*/}
             if [ "$pkg" = doona ]; then
               flags="--version=unstable"
+            elif [ "$pkg" = honk ] || [ "$pkg" = honk-stock ]; then
+              continue
             else
               flags=""
             fi

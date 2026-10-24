@@ -38,11 +38,23 @@
       );
 
       # Local applications are discovered from packages/apps/<name>/package.nix.
+      # A directory may publish release variants by returning an attrset of
+      # derivations (see packages/apps/honk/); those are re-exported flat —
+      # keep the explicit re-exports in sync with overlays/apps.nix. The
+      # union stays lazy: no derivation may be forced while building this
+      # set (nixpkgs re-applies overlays for every stdenv boot stage).
       appPackages = lib.mapAttrs (
         _: pkgs:
-        lib.packagesFromDirectoryRecursive {
-          inherit (pkgs) callPackage;
-          directory = ./packages/apps;
+        let
+          apps = lib.packagesFromDirectoryRecursive {
+            inherit (pkgs) callPackage;
+            directory = ./packages/apps;
+          };
+        in
+        apps
+        // {
+          honk = apps.honk.honk;
+          honk-stock = apps.honk.honk-stock;
         }
       ) pkgsFor;
 

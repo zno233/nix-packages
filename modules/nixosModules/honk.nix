@@ -21,6 +21,7 @@ let
     optionalString
     getExe
     mkPackageOption
+    isString
     ;
 
   cfg = config.services.honk-core;
@@ -33,8 +34,12 @@ let
       inherit paths;
     };
 
+  # ui option -> value for native_api.ui: the "embedded" literal passes
+  # through; a package resolves to its static dashboard directory.
+  uiPath = ui: if isString ui then ui else "${ui}/share/doona";
+
   # Native API block shared by both wiring paths (inline bake / config.d
-  # include): honk serves doona's static UI at /ui/, same origin as /api.
+  # include): honk serves the dashboard at /ui/, same origin as /api.
   nativeApiText = ui: ''
     # Every native_api field needs a restart; a reload rejects changes.
     experimental {
@@ -48,7 +53,7 @@ let
             # secret: 'replace-with-a-long-random-token'
             # doona's config page writes sources through the engine (If-Match)
             config_write: true
-            ui: '${ui}/share/doona'
+            ui: '${uiPath ui}'
             # On by default; listed so the names are known.
             record_flows: true
             record_traffic: true
@@ -160,12 +165,15 @@ in
       };
 
       ui = mkOption {
-        type = types.nullOr types.package;
+        type = types.nullOr (types.either types.package (types.enum [ "embedded" ]));
         default = null;
         example = "pkgs.doona";
         description = ''
-          Static web UI package served by honk's native API at /ui/ (same origin as /api).
-          When set (e.g. pkgs.doona), the module only places
+          Dashboard hosted by honk's native API at /ui/ (same origin as /api).
+          Set to "embedded" to serve the dashboard inside honk's `-full`
+          build (always matches the engine version), or to a package (e.g.
+          pkgs.doona) whose `/share/doona` contains it, to run the panel
+          from a separate build. When set, the module only places
           `config.d/api.dae` next to `configFile` with experimental.native_api
           enabled. The `include { config.d/*.dae }` in `configFile` is a module
           default maintained independently of this option (a legacy
