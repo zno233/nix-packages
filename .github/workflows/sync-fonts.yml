@@ -73,4 +73,6 @@ jobs:
 
       - name: Push
         if: steps.diff.outputs.changed == 'true'
-        run: git push
+        run: |
+          git pull --rebase origin main
+          git push

@@ -26,7 +26,8 @@ jobs:
             builders =
             experimental-features = nix-command flakes
 
-      - name: Update, check and push
+      - name: Update packages
+        id: update
         run: |
           set -u
           git config user.name "github-actions[bot]"
@@ -41,29 +42,45 @@ jobs:
           fi
 
           # Per-package updates; a single failure must not block the rest.
-          # nix-update ignores pre-releases by default; doona only publishes
-          # those, so it needs --version=unstable.
-          # honk/honk-stock share one version and their atom feed ranks the
-          # rolling "debug" CI channel above SemVer releases; both flavors
-          # are pinned by one tools/update-pins rule.
-          # Some remaining pins have no releasable version for nix-update
-          # (rolling HEAD commits, multi-asset release data, CDN-replaced
-          # dmg content) — those are refreshed through tools/update-pins
-          # per its TOML recipes.
-          status=0
-          ./tools/update-pins || status=1
+          failed_pkgs=""
+
+          echo "::group::Update pins"
+          ./tools/update-pins || failed_pkgs="update-pins"
+          echo "::endgroup::"
+
+          # Packages driven by tools/update-pins (no releasable version,
+          # shared pin, or atom feed unsuitable for nix-update).
+          pin_managed="honk honk-stock fcitx5-theme-collect"
+
           for dir in packages/apps/*/; do
             pkg=${dir%/}
             pkg=${pkg##*/}
-            if [ "$pkg" = doona ]; then
-              flags="--version=unstable"
-            elif [ "$pkg" = honk ] || [ "$pkg" = honk-stock ]; then
-              continue
-            else
-              flags=""
-            fi
-            nix run github:Mic92/nix-update -- --commit --flake $flags "$pkg" || status=1
+            case " $pin_managed " in
+              *" $pkg "*) continue ;;
+            esac
+
+            # nix-update ignores pre-releases by default; doona only publishes
+            # those, so it needs --version=unstable.
+            flags=""
+            [ "$pkg" = "doona" ] && flags="--version=unstable"
+
+            echo "::group::Update $pkg"
+            nix run github:Mic92/nix-update -- --commit --flake $flags "$pkg" || {
+              failed_pkgs="$failed_pkgs $pkg"
+            }
+            echo "::endgroup::"
           done
+
+          # Pass failure info as data so Check and push still runs.
+          if [ -n "$failed_pkgs" ]; then
+            failed_pkgs="${failed_pkgs# }"
+            echo "failed=$failed_pkgs" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check and push
+        if: github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
 
           # Nothing new? Skip the (expensive) rebuild checks entirely;
           # the runner store is cold every run.
@@ -72,15 +89,25 @@ jobs:
             exit 0
           fi
 
-          # Never push updates that fail evaluation or builds. `checks` is
-          # derived from packages/apps, so new apps are covered automatically.
-          check_ok=1
-          nix flake check --print-build-logs --no-update-lock-file --no-write-lock-file || check_ok=0
+          # Never push updates that fail evaluation or builds.
+          nix flake check --print-build-logs --no-update-lock-file --no-write-lock-file
 
-          if [ "$check_ok" -eq 1 ]; then
-            git push
-          else
-            echo "::error::checks failed; updates were NOT pushed"
-            status=1
-          fi
-          exit "$status"
+          git pull --rebase origin main
+          git push
+
+      # Fail the job so the run is ❌ in the Actions list. Successful
+      # commits (if any) were already checked and pushed above.
+      - name: Fail if any package update failed
+        if: steps.update.outputs.failed != ''
+        run: |
+          failed="${{ steps.update.outputs.failed }}"
+          echo "::error title=Package update(s) failed::${failed}"
+          {
+            echo "## Package update failed"
+            echo
+            echo "**Failed:** \`${failed}\`"
+            echo
+            echo "Successful commits (if any) were still checked and pushed above."
+            echo "This job is marked failed only so the run shows as failed in the Actions list."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1

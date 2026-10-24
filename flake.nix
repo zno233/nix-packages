@@ -107,7 +107,9 @@
         default = pkgs.mkShell {
           packages = with pkgs; [
             deadnix
+            nix-update
             nixfmt
+            python3
             statix
           ];
         };
