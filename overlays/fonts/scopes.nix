@@ -145,14 +145,16 @@ let
         wingdings
       ];
 
-      windowsSlimZhCn = windowsSlimCore ++ (with packageScope; [
-        dengxian
-        fangsong
-        kaiti
-        microsoft-yahei
-        simhei
-        simsun
-      ]);
+      windowsSlimZhCn =
+        windowsSlimCore
+        ++ (with packageScope; [
+          dengxian
+          fangsong
+          kaiti
+          microsoft-yahei
+          simhei
+          simsun
+        ]);
     in
     removeAttrs packageScope [
       "builder"
@@ -169,7 +171,8 @@ let
       # plus DengXian).
       windows-fonts-zh-cn = link fontPackages "windows-fonts-zh-cn" (_: true);
       windows-fonts-en-us = link fontPackages "windows-fonts-en-us" (
-        drv: !(elem drv [
+        drv:
+        !(elem drv [
           packageScope.dengxian
           packageScope.kaiti
           packageScope.fangsong

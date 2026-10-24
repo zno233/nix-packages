@@ -145,14 +145,16 @@ let
     wingdings
   ];
 
-  windowsSlimZhCn = windowsSlimCore ++ (with microsoftPackages; [
-    dengxian
-    fangsong
-    kaiti
-    microsoft-yahei
-    simhei
-    simsun
-  ]);
+  windowsSlimZhCn =
+    windowsSlimCore
+    ++ (with microsoftPackages; [
+      dengxian
+      fangsong
+      kaiti
+      microsoft-yahei
+      simhei
+      simsun
+    ]);
 
   licenseIn = licenses: drv: elem (drv.meta.license or null) licenses;
 
