@@ -29,10 +29,10 @@ let
         sources.files.${file} or (throw ''
           chinese-fonts-overlay: no direct source for Microsoft font file `${file}`.
 
-          Add a mapping for it to tools/gen-ms-sources/map.tsv and run
-          tools/gen-ms-sources/gen.sh to regenerate
-          tools/gen-ms-sources/sources.nix, or drop the file from `files`
-          in the package definition.
+          Run tools/gen-ms-sources/gen.sh to regenerate
+          tools/gen-ms-sources/sources.nix (its coverage check reports the
+          missing files), or drop the file from `files` in the package
+          definition.
         '');
     in
     fetchurl { inherit (source) url hash; };
@@ -45,8 +45,16 @@ let
       mkdir -p $fontDir
 
     ${concatMapStrings (file: ''
-      gunzip -c ${sourceFor file} > "$fontDir"/${escapeShellArg file}
-      chmod 444 "$fontDir"/${escapeShellArg file}
+      src=${sourceFor file}
+      fontFile="$fontDir"/${escapeShellArg file}
+      # legacy pjobson-era sources were gzipped; the current uinv
+      # windows-fonts snapshot ships the font files as-is
+      if gzip -t "$src" 2>/dev/null; then
+        gunzip -c "$src" > "$fontFile"
+        chmod 444 "$fontFile"
+      else
+        install -m 444 "$src" "$fontFile"
+      fi
     '') files}
       runHook postInstall
   '';
@@ -58,7 +66,7 @@ let
 
     longDescription = ''
       Provides font files for ${fontFamily}, downloaded from the
-      pjobson/Microsoft-Fonts archive of Microsoft Windows font files.
+      uinv/windows-fonts Windows font snapshot.
 
       Obtain a valid license under the Microsoft Software License
       Terms before use. After obtaining it, do not redistribute the

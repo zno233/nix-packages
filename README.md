@@ -30,8 +30,15 @@ A repo to store personal nix packages.
   bundle per vendor on top; scopes where a single font carries the vendor
   are promoted as plain `pkgs.<font>` attributes. Windows editions are
   additionally curated as `windows-fonts-zh-cn` (complete set, as shipped by
-  a zh-CN install) and `windows-fonts-en-us` (everything but the SimHei/
-  KaiTi/FangSong legacy trio an en-US image does not bundle).
+  a zh-CN install) and `windows-fonts-en-us` (everything but the zh-CN-only
+  SimHei/KaiTi/FangSong trio and DengXian an en-US image does not bundle).
+  Both have `-slim` variants carrying the Office core/theme and classic
+  document faces plus Segoe UI's UI/emoji variants (exotic-script fonts such
+  as Tibetan, Mongolian, Yi, Tai, PhagsPa, Myanmar, Javanese, Indian and
+  other rare scripts are only in the full aggregates); the zh-CN slim set
+  additionally carries 宋体/黑体/楷体/仿宋/微软雅黑/等线 — the Traditional
+  Chinese, Japanese, and Korean faces are kept out of it on purpose, they
+  account for most of the size and are not needed for zh-CN documents.
 - `nixosModules.honk` configures the honk proxy engine service;
   `nixosModules.default` imports every module provided by this flake.
 
@@ -48,8 +55,11 @@ personal machines.
 [brsvh/chinese-fonts-overlay](https://github.com/brsvh/chinese-fonts-overlay),
 refreshed daily by `sync-fonts.yml`; `apple/`, `microsoft/`, and `zno/` are
 maintained here. The microsoft tree is built from
-`tools/gen-ms-sources/sources.nix` — regenerate it with `gen.sh` when
-upstream changes.
+`tools/gen-ms-sources/sources.nix`, which is generated from the
+[uinv/windows-fonts](https://github.com/uinv/windows-fonts) `windows11`
+snapshot: package `files` lists must match its exact-case file names, and
+`gen.sh` regenerates `sources.nix` from the current branch tip (or a
+pinned commit via `GEN_MS_SOURCES_PIN`) after verifying that coverage.
 
 ## CI
 

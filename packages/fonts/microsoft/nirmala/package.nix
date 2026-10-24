@@ -7,6 +7,8 @@ mkMicrosoftFontDerivation {
   fontFamily = "Nirmala UI";
 
   files = [
-    "Nirmala UI.ttf"
+    "Nirmala.ttf"
+    "NirmalaB.ttf"
+    "NirmalaS.ttf"
   ];
 }

@@ -82,17 +82,77 @@ let
 
   # Windows edition split. A stock en-US Windows 10/11 image ships the full
   # CJK UI set (YaHei, SimSun, JhengHei, MingLiU-ExtB, Malgun, MS/Yu Gothic)
-  # for font fallback — the pjobson 2021-Windows-11 tree is an English build
-  # and still contains all of them. The only fonts it does not carry are the
-  # zh-CN legacy fonts SimHei, KaiTi, and FangSong, which the archive only
-  # provides from its Windows 7 directory. So `windows-fonts-en-us` is every
-  # microsoft package save those three, and `windows-fonts-zh-cn` is the
-  # complete set, i.e. what a zh-CN install effectively bundles.
+  # for font fallback — the uinv/windows-fonts windows11 snapshot is an
+  # English build and still contains all of them. The fonts it does not
+  # carry are the zh-CN-only SimHei, KaiTi, FangSong (Windows 7-era legacy
+  # fonts) and DengXian. So `windows-fonts-en-us` is every microsoft
+  # package save those four, and `windows-fonts-zh-cn` is the complete
+  # set, i.e. what a zh-CN install effectively bundles.
   windowsEnUsExcluded = with microsoftPackages; [
+    dengxian
     fangsong
     kaiti
     simhei
   ];
+
+  # Minimal sets that keep Word documents intact: the Office core/theme
+  # families, the classic Windows document faces, Segoe UI's UI/emoji
+  # variants, and the usual decorative/Office-bundled fonts. Exotic-script
+  # faces (Tibetan, Mongolian, Yi, Tai, PhagsPa, Myanmar, Javanese, Indian
+  # scripts, Cherokee, Thaana, N'Ko, Thai, ...) are left to the full
+  # aggregates. The zh-CN add-on carries only the Simplified Chinese families a
+  # Chinese Office install has (宋体/黑体/楷体/仿宋/微软雅黑/等线); the
+  # Traditional Chinese, Japanese, and Korean faces are deliberately left to
+  # the full aggregates because they are the largest files in the tree
+  # (~174 MiB for JhengHei/MingLiU/MS Gothic/Yu Gothic/Malgun) and a zh-CN
+  # Word document does not need them.
+  windowsSlimCore = with microsoftPackages; [
+    arial
+    bahnschrift
+    calibri
+    cambria
+    cambria-math
+    candara
+    comic-sans-ms
+    consolas
+    constantia
+    corbel
+    courier-new
+    franklin-gothic-medium
+    gabriola
+    georgia
+    impact
+    ink-free
+    lucida-console
+    lucida-sans-unicode
+    marlett
+    microsoft-sans-serif
+    palatino-linotype
+    segoe-icons
+    segoe-print
+    segoe-script
+    segoe-ui
+    segoe-ui-symbols
+    segoe-ui-variable
+    sitka
+    sylfaen
+    symbol
+    tahoma
+    times-new-roman
+    trebuchet-ms
+    verdana
+    webdings
+    wingdings
+  ];
+
+  windowsSlimZhCn = windowsSlimCore ++ (with microsoftPackages; [
+    dengxian
+    fangsong
+    kaiti
+    microsoft-yahei
+    simhei
+    simsun
+  ]);
 
   licenseIn = licenses: drv: elem (drv.meta.license or null) licenses;
 
@@ -168,6 +228,16 @@ let
       name = "windows-fonts-zh-cn";
       scope = microsoftPackages;
       predicate = all;
+    }
+    {
+      name = "windows-fonts-en-us-slim";
+      scope = microsoftPackages;
+      predicate = drv: elem drv windowsSlimCore;
+    }
+    {
+      name = "windows-fonts-zh-cn-slim";
+      scope = microsoftPackages;
+      predicate = drv: elem drv windowsSlimZhCn;
     }
     {
       name = "tsangertype-gcu-fonts";
