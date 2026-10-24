@@ -16,28 +16,34 @@
   # allocator fragment of the meta.description
   allocator,
 }:
-{ lib, stdenv, fetchurl, autoPatchelfHook }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  autoPatchelfHook,
+}:
 
 let
   arch =
     {
       x86_64-linux = "x86_64";
       aarch64-linux = "aarch64";
-    }.${stdenv.hostPlatform.system} or (
-      throw "make-honk.nix: no prebuilt archive for ${stdenv.hostPlatform.system} (only x86_64-linux/aarch64-linux)"
-    );
+    }
+    .${stdenv.hostPlatform.system}
+      or (throw "make-honk.nix: no prebuilt archive for ${stdenv.hostPlatform.system} (only x86_64-linux/aarch64-linux)");
 
-  assertValid =
-    lib.assertMsg (builtins.elem flavor [
-      "full"
-      "stock"
-    ]) "make-honk.nix: flavor must be one of full, stock (got: ${flavor})";
+  assertValid = lib.assertMsg (builtins.elem flavor [
+    "full"
+    "stock"
+  ]) "make-honk.nix: flavor must be one of full, stock (got: ${flavor})";
 
   target = "${arch}-unknown-linux-gnu";
-  asset = {
-    full = "full";
-    stock = "stock-full";
-  }.${flavor};
+  asset =
+    {
+      full = "full";
+      stock = "stock-full";
+    }
+    .${flavor};
   archive = "honk-core-${version}-${target}-${asset}";
 in
 

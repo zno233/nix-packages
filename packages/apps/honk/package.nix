@@ -37,13 +37,11 @@ let
       pin = import ./packages/honk.nix;
       fd = flavorData.${name};
     in
-    callPackage
-      (import ./make-honk.nix {
-        pname = name;
-        inherit (pin) version hashes;
-        inherit (fd) flavor allocator;
-      })
-      { };
+    callPackage (import ./make-honk.nix {
+      pname = name;
+      inherit (pin) version hashes;
+      inherit (fd) flavor allocator;
+    }) { };
 in
 {
   honk = mkHonk "honk";
