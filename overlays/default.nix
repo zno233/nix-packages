@@ -18,11 +18,13 @@ let
   fonts = import ./fonts.nix {
     inherit lib overlayLib projectRoot;
   };
+
+  apps = import ./apps.nix { inherit lib projectRoot; };
 in
 {
   overlays.default = lib.composeManyExtensions [
     fonts.overlay
-    (import ./apps.nix { inherit lib projectRoot; })
+    apps.overlay
   ];
 
   inherit (fonts) aggregateNames flattenNames;

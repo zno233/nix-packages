@@ -25,7 +25,7 @@ let
     ;
 
   cfg = config.services.honk-core;
-  inherit (cfg) assets;
+  inherit (cfg) assets nativeApiListen;
 
   genAssetsDrv =
     paths:
@@ -45,8 +45,9 @@ let
     experimental {
         native_api {
             enabled: true
-            # Loopback only; set a LAN address (e.g. 192.168.1.1:9527) to reach doona from other hosts.
-            listen: '127.0.0.1:9527'
+            # Loopback by default; set services.honk-core.nativeApiListen
+            # (e.g. '192.168.1.1:9527') to reach doona from other hosts.
+            listen: '${nativeApiListen}'
             # Administrator password login. For token mode, delete this
             # line and set secret instead; the two cannot be combined.
             password_auth: true
@@ -162,6 +163,20 @@ in
 
       disableTxChecksumIpGeneric = mkEnableOption "" // {
         description = "See <https://github.com/daeuniverse/dae/issues/43>";
+      };
+
+      nativeApiListen = mkOption {
+        type = types.str;
+        default = "127.0.0.1:9527";
+        example = "192.168.1.1:9527";
+        description = ''
+          Address/name and port (`host:port`) the native API listens on.
+          Only applies when `ui` is set (the module writes the native_api
+          block itself); a manual `native_api` in `config` overrides the
+          module's wiring entirely. Both parts need a service restart.
+          Set a LAN address (e.g. `192.168.1.1:9527`) to reach doona from
+          other hosts; a firewall entry is not opened for it here.
+        '';
       };
 
       ui = mkOption {

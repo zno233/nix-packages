@@ -2,7 +2,8 @@ name: Sync fonts
 
 on:
   schedule:
-    - cron: "47 5 * * *"
+    # GitHub cron is UTC-only: 20:47 UTC == 04:47 Beijing time (next day).
+    - cron: "47 20 * * *"
   workflow_dispatch:
 
 permissions:
@@ -20,7 +21,8 @@ jobs:
 
       - uses: cachix/install-nix-action@v31.11.1
         with:
-          install_url: https://releases.nixos.org/nix/nix-2.34.8/install
+          # No install_url pin: Nix follows the action's bundled default, so
+          # Dependabot's action bumps also carry the Nix version forward.
           extra_nix_config: |
             accept-flake-config = false
             builders =
@@ -65,11 +67,25 @@ jobs:
       - name: Verify
         # The runner store is cold every run, so only pay the font
         # re-download cost when the tree actually changed. --no-build
-        # already evaluates every package output (including apple-fonts).
+        # already evaluates every package output (including apple-fonts),
+        # and the staged diff names the upstream vendors whose aggregate
+        # is actually built — locally maintained trees (apple, zno) get
+        # the same treatment whenever their copies change here.
         if: steps.diff.outputs.changed == 'true'
         run: |
+          set -euo pipefail
           nix flake check --no-build --no-update-lock-file --no-write-lock-file
-          nix build .#windows-fonts .#zno-fonts --no-link --no-update-lock-file --no-write-lock-file
+
+          builds=""
+          for vendor in $(git diff --cached --name-only \
+              | grep '^packages/fonts/' | cut -d/ -f3 | sort -u || true); do
+            # every vendor directory registers a `<vendor>-fonts` aggregate
+            [ -d "packages/fonts/$vendor" ] && builds="$builds .#$vendor-fonts"
+          done
+          if [ -n "$builds" ]; then
+            nix build $builds --no-link \
+              --no-update-lock-file --no-write-lock-file
+          fi
 
       - name: Push
         if: steps.diff.outputs.changed == 'true'

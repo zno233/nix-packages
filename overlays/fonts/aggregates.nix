@@ -15,6 +15,8 @@
 let
   inherit (lib) elem;
 
+  windowsEditions = import ./windows-fonts-editions.nix;
+
   inherit (lib.licenses)
     foundertype-commercial-license
     foundertype-family-license
@@ -80,81 +82,11 @@ let
     harmonyos-sans-naskh-arabic-ui-vf
   ];
 
-  # Windows edition split. A stock en-US Windows 10/11 image ships the full
-  # CJK UI set (YaHei, SimSun, JhengHei, MingLiU-ExtB, Malgun, MS/Yu Gothic)
-  # for font fallback — the uinv/windows-fonts windows11 snapshot is an
-  # English build and still contains all of them. The fonts it does not
-  # carry are the zh-CN-only SimHei, KaiTi, FangSong (Windows 7-era legacy
-  # fonts) and DengXian. So `windows-fonts-en-us` is every microsoft
-  # package save those four, and `windows-fonts-zh-cn` is the complete
-  # set, i.e. what a zh-CN install effectively bundles.
-  windowsEnUsExcluded = with microsoftPackages; [
-    dengxian
-    fangsong
-    kaiti
-    simhei
-  ];
-
-  # Minimal sets that keep Word documents intact: the Office core/theme
-  # families, the classic Windows document faces, Segoe UI's UI/emoji
-  # variants, and the usual decorative/Office-bundled fonts. Exotic-script
-  # faces (Tibetan, Mongolian, Yi, Tai, PhagsPa, Myanmar, Javanese, Indian
-  # scripts, Cherokee, Thaana, N'Ko, Thai, ...) are left to the full
-  # aggregates. The zh-CN add-on carries only the Simplified Chinese families a
-  # Chinese Office install has (宋体/黑体/楷体/仿宋/微软雅黑/等线); the
-  # Traditional Chinese, Japanese, and Korean faces are deliberately left to
-  # the full aggregates because they are the largest files in the tree
-  # (~174 MiB for JhengHei/MingLiU/MS Gothic/Yu Gothic/Malgun) and a zh-CN
-  # Word document does not need them.
-  windowsSlimCore = with microsoftPackages; [
-    arial
-    bahnschrift
-    calibri
-    cambria
-    cambria-math
-    candara
-    comic-sans-ms
-    consolas
-    constantia
-    corbel
-    courier-new
-    franklin-gothic-medium
-    gabriola
-    georgia
-    impact
-    ink-free
-    lucida-console
-    lucida-sans-unicode
-    marlett
-    microsoft-sans-serif
-    palatino-linotype
-    segoe-icons
-    segoe-print
-    segoe-script
-    segoe-ui
-    segoe-ui-symbols
-    segoe-ui-variable
-    sitka
-    sylfaen
-    symbol
-    tahoma
-    times-new-roman
-    trebuchet-ms
-    verdana
-    webdings
-    wingdings
-  ];
-
-  windowsSlimZhCn =
-    windowsSlimCore
-    ++ (with microsoftPackages; [
-      dengxian
-      fangsong
-      kaiti
-      microsoft-yahei
-      simhei
-      simsun
-    ]);
+  # Windows edition split; the name lists (with their rationale) live in
+  # overlays/fonts/windows-fonts-editions.nix and are shared with the scope-level
+  # path. Looking each name up in `microsoftPackages` also fails loudly if
+  # the manifest and the tree ever drift apart.
+  windowsEnUsExcluded = map (n: microsoftPackages.${n}) windowsEditions.enUsExcluded;
 
   licenseIn = licenses: drv: elem (drv.meta.license or null) licenses;
 
@@ -234,12 +166,12 @@ let
     {
       name = "windows-fonts-en-us-slim";
       scope = microsoftPackages;
-      predicate = drv: elem drv windowsSlimCore;
+      predicate = drv: elem drv (map (n: microsoftPackages.${n}) windowsEditions.slimCore);
     }
     {
       name = "windows-fonts-zh-cn-slim";
       scope = microsoftPackages;
-      predicate = drv: elem drv windowsSlimZhCn;
+      predicate = drv: elem drv (map (n: microsoftPackages.${n}) windowsEditions.slimZhCn);
     }
     {
       name = "tsangertype-gcu-fonts";

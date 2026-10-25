@@ -2,7 +2,8 @@ name: Update packages
 
 on:
   schedule:
-    - cron: "23 5 * * *"
+    # GitHub cron is UTC-only: 20:23 UTC == 04:23 Beijing time (next day).
+    - cron: "23 20 * * *"
   workflow_dispatch:
 
 permissions:
@@ -20,7 +21,8 @@ jobs:
 
       - uses: cachix/install-nix-action@v31.11.1
         with:
-          install_url: https://releases.nixos.org/nix/nix-2.34.8/install
+          # No install_url pin: Nix follows the action's bundled default, so
+          # Dependabot's action bumps also carry the Nix version forward.
           extra_nix_config: |
             accept-flake-config = false
             builders =
@@ -48,28 +50,42 @@ jobs:
           ./tools/update-pins || failed_pkgs="update-pins"
           echo "::endgroup::"
 
-          # Packages driven by tools/update-pins (no releasable version,
-          # shared pin, or atom feed unsuitable for nix-update).
-          pin_managed="honk honk-stock fcitx5-theme-collect"
+          # Which packages nix-update drives and with which flags comes from
+          # tools/update-pins.toml ([meta], via --print-config) so it can
+          # never drift from the pin rules the workflow skips.
+          config=$(./tools/update-pins --print-config)
+          managed=" $(jq -r '.managed | join(" ")' <<<"$config") "
 
           for dir in packages/apps/*/; do
             pkg=${dir%/}
             pkg=${pkg##*/}
-            case " $pin_managed " in
+            case "$managed" in
               *" $pkg "*) continue ;;
             esac
 
-            # nix-update ignores pre-releases by default; doona only publishes
-            # those, so it needs --version=unstable.
-            flags=""
-            [ "$pkg" = "doona" ] && flags="--version=unstable"
+            flags=$(jq -r --arg pkg "$pkg" '.nix_update[$pkg] // [] | join(" ")' <<<"$config")
 
             echo "::group::Update $pkg"
-            nix run github:Mic92/nix-update -- --commit --flake $flags "$pkg" || {
+            nix run .#nix-update -- --commit --flake $flags "$pkg" || {
               failed_pkgs="$failed_pkgs $pkg"
             }
             echo "::endgroup::"
           done
+
+          # Font changes committed this run (sync-fonts.yml builds the
+          # affected vendors itself, this covers every other path in)
+          # also get build coverage: the vendored trees have no flake
+          # input whose CI build failure could surface for them.
+          vendors=$({ git diff --cached --name-only; git diff --name-only '@{u}'; } \
+            | grep '^packages/fonts/' | cut -d/ -f3 | sort -u | tr '\n' ' ')
+          if [ -n "$vendors" ]; then
+            echo "::group::Build changed font vendors ($vendors)"
+            for vendor in $vendors; do
+              nix build ".#$vendor-fonts" --no-link \
+                --no-update-lock-file --no-write-lock-file || failed_pkgs="$failed_pkgs $vendor-fonts"
+            done
+            echo "::endgroup::"
+          fi
 
           # Pass failure info as data so Check and push still runs.
           if [ -n "$failed_pkgs" ]; then

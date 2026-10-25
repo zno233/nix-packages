@@ -18,6 +18,21 @@
 # Supported transforms live in tools/update-pins TRANSFORMS: sri (hex
 # sha256 -> SRI), dmghash (download URL -> SRI, cached per URL), short
 # (first 7 chars) and iso (timestamp -> YYYY-MM-DD UTC).
+#
+# The [meta] table is not a rule: it tells the update workflow how to
+# drive the packages outside of these recipes, and is consumed by
+# `tools/update-pins --print-config` (JSON on stdout).
+
+[meta]
+# App directories not driven by nix-update because their updates run
+# through a rule here (honk's single pin feeds the honk-stock variant
+# too, and fcitx5-theme-collect follows a rolling HEAD).
+managed = ["honk", "honk-stock", "fcitx5-theme-collect"]
+
+# Extra nix-update flags per app directory.
+[meta.nix-update]
+# nix-update ignores pre-releases by default; doona only publishes those.
+doona = "--version=unstable"
 
 [honk]
 package = "packages/apps/honk/packages/honk.nix"
