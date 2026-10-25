@@ -89,7 +89,7 @@ in
       };
 
       # Vendor packages promoted past their scope, addressed as `pkgs.<name>`.
-      flat = lib.mapAttrs (name: path: lib.getAttrFromPath path scopes) aggregates.flatPaths;
+      flat = lib.mapAttrs (_name: path: lib.getAttrFromPath path scopes) aggregates.flatPaths;
 
       compat = import ./fonts/compat.nix { inherit lib; };
     in

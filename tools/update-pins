@@ -24,7 +24,7 @@ the changed files of a rule are committed once with its formatted message.
 Any failure exits non-zero; the update workflow treats that as a failed
 sub-updater.
 
-Usage: tools/update-pins [rule ...]   (default: every rule)
+Usage: tools/update-pins [--print-config] [rule ...]   (default: every rule)
 """
 
 import glob
@@ -257,6 +257,8 @@ def load_rules(path: Path) -> dict:
     raw = tomllib.loads(path.read_text())
     rules = {}
     for name, rule in raw.items():
+        if name == "meta":
+            continue
         if set(META) & set(rule) == set():
             fail(f"rule {name} lacks package/packages")
         rules[name] = rule
@@ -266,9 +268,28 @@ def load_rules(path: Path) -> dict:
 RULES = load_rules(root / "tools" / "update-pins.toml")
 
 
+def print_config() -> None:
+    """Emit the [meta] table as the update workflow's driving config."""
+    meta = tomllib.loads((root / "tools" / "update-pins.toml").read_text())["meta"]
+    print(
+        json.dumps(
+            {
+                "managed": meta["managed"],
+                "nix_update": {
+                    pkg: str(flags).split() for pkg, flags in meta["nix-update"].items()
+                },
+            }
+        )
+    )
+
+
 def main() -> None:
     hasher = Hasher()
-    selected = sys.argv[1:] or list(RULES)
+    args = sys.argv[1:]
+    if "--print-config" in args:
+        print_config()
+        return
+    selected = args or list(RULES)
     status = 0
     for name in selected:
         if name not in RULES:

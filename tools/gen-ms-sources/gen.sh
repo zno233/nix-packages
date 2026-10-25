@@ -32,6 +32,10 @@ hex2sri() {
   # binary must stream through a pipe: command substitution would drop NULs
   printf 'sha256-%s' "$(
     for ((i = 0; i < ${#hex}; i += 2)); do
+      # dynamic \x escape into the format string: it is on purpose — bash's
+      # printf only accepts literal hex digits in \xHH, so \x%s would emit
+      # the backslash-x text instead of the byte
+      # shellcheck disable=SC2059
       printf "\\x${hex:i:2}"
     done | base64 -w0
   )"
@@ -144,10 +148,14 @@ export -f build_entry curl_get hex2sri raw_url
 export here repo pin cache entries_dir
 
 printf 'gen-ms-sources: hashing %d files (%d parallel)\n' "$total" "$jobs" >&2
+hash_entries() {
+  # single quotes are required: the snippet is code run by the child shell
+  # shellcheck disable=SC2016
+  xargs -n2 -P "$jobs" bash -c 'build_entry "$1"' _
+}
 while IFS= read -r file; do
   printf '%s\t%s\n' "$file" "$file"
-done < "$tmp/resolved" |
-  xargs -n2 -P "$jobs" bash -c 'build_entry "$1"' _
+done < "$tmp/resolved" | hash_entries
 
 entries="$tmp/entries.all"
 find "$entries_dir" -type f -exec cat {} + |

@@ -1,0 +1,12 @@
+# Keep the reusable GitHub Actions in the workflows current. The nix
+# inputs themselves are updated by update.yml's flake refresh and the
+# vendored fonts by sync-fonts.yml, so only actions/ are handled here.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

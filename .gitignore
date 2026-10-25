@@ -1,4 +1,7 @@
 /result
 /result-*
 .direnv/
+# gen-ms-sources cache (normally under tools/gen-ms-sources/; a stray root
+# .cache/ appears only if gen.sh is sourced instead of executed)
+.cache/
 /tools/gen-ms-sources/.cache

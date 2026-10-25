@@ -24,7 +24,12 @@ A repo to store personal nix packages.
   Without applying it, reference `packages.<system>.<name>` directly;
   `legacyPackages` exposes the whole prepared `pkgs` set.
 - Applications are auto-discovered from `packages/apps/<name>/package.nix` —
-  adding one is just a new directory.
+  adding one is just a new directory (exported under the directory name plus
+  any re-export variants declared in `overlays/apps.nix`, e.g. `honk` /
+  `honk-stock`). Packages published for a subset of systems only appear on
+  those (`packages`/`checks` are filtered per platform); unsupported
+  building platforms are not exposed at all (x86_64-darwin was dropped
+  along with upstream nixpkgs support for it).
 - Fonts live in `packages/fonts/<vendor>/<font>/package.nix` under a
   per-vendor `<vendor>Packages` scope, with one `<vendor>-fonts` aggregate
   bundle per vendor on top; scopes where a single font carries the vendor
@@ -63,14 +68,25 @@ pinned commit via `GEN_MS_SOURCES_PIN`) after verifying that coverage.
 
 ## CI
 
-- `check.yml`: `nix flake check` on push / PR
-- `update.yml`: daily flake.lock bump and package updates (apps via nix-update;
-  pins without a releasable version follow `tools/update-pins.toml` recipes),
-  pushed only after a passing check
+- `check.yml`: formatting (`nix fmt -- --fail-on-change`), `shellcheck` on
+  the shell sources, `statix`/`deadnix` Nix lint, and `nix flake check`
+  (which also evaluates the honk module through the smoke-test
+  `nixosConfigurations`) on push / PR
+- `update.yml`: daily flake.lock bump and package updates (apps via a
+  lockfile-pinned nix-update; pins without a releasable version follow the
+  `tools/update-pins.toml` recipes — the same file tells nix-update which
+  packages to skip and which flags to use), plus a build of any font
+  aggregates whose vendor tree a commit touched, pushed only after a
+  passing check
 - `sync-fonts.yml`: daily font-tree sync from upstream mirrors, local trees
-  excluded, pushed only after a passing check
+  excluded, pushed only after a passing check; the check builds the font
+  aggregate of every vendor actually changed by the sync
+- `.github/dependabot.yml` keeps the GitHub Actions in the workflows current;
+  Nix itself is not pinned either — it follows the install-nix-action default,
+  so the weekly action bumps carry the Nix version forward as well
 
 ## Development
 
-`nix fmt` (nixfmt) and `nix flake check` are the base loop; `nix develop`
-provides `nixfmt`, `statix`, and `deadnix`.
+`nix fmt` (nixfmt via treefmt) and `nix flake check` are the base loop;
+`nix develop` provides `nixfmt-tree`, `statix`, `deadnix`, `shellcheck`,
+`python3`, and `nix-update`.

@@ -1,0 +1,6 @@
+# statix reads this automatically (see statix list). `repeated_keys` is off
+# because the update-pins-generated hash tables (packages/apps/*/packages/)
+# use flat one-line entries on purpose; see the header comment there.
+disabled = [
+  "repeated_keys",
+]

@@ -16,11 +16,24 @@ jobs:
 
       - uses: cachix/install-nix-action@v31.11.1
         with:
-          install_url: https://releases.nixos.org/nix/nix-2.34.8/install
+          # No install_url pin: Nix follows the action's bundled default, so
+          # Dependabot's action bumps also carry the Nix version forward.
           extra_nix_config: |
             accept-flake-config = false
             builders =
             experimental-features = nix-command flakes
+
+      - name: Check formatting
+        run: nix fmt -- --fail-on-change
+
+      - name: Lint shell sources
+        run: nix run .#shellcheck -- tools/gen-ms-sources/gen.sh
+
+      - name: Statix (Nix lint)
+        run: nix run .#statix -- check
+
+      - name: Deadnix (unused declarations)
+        run: nix run .#deadnix -- -L --fail -- .
 
       - name: Check flake and build packages
         run: nix flake check --print-build-logs --no-update-lock-file --no-write-lock-file
