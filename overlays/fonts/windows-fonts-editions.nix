@@ -63,18 +63,55 @@
     "wingdings"
   ];
 
-  # The zh-CN slim add-on carries only the Simplified Chinese families a
-  # Chinese Office install has (宋体/黑体/楷体/仿宋/微软雅黑/等线); the
-  # Traditional Chinese, Japanese, and Korean faces are deliberately left
-  # to the full aggregates because they are the largest files in the tree
-  # (~174 MiB for JhengHei/MingLiU/MS Gothic/Yu Gothic/Malgun) and a zh-CN
-  # Word document does not need them.
+  # The zh-CN slim edition carries the same latin core as slimCore plus
+  # the Simplified Chinese families a Chinese Office install has (宋体/
+  # 黑体/楷体/仿宋/微软雅黑/等线), roughly matching a Win11 zh-CN image's
+  # C:\Windows\Fonts. The Traditional Chinese, Japanese, and Korean faces
+  # are deliberately left to the full aggregates because they are the
+  # largest files in the tree (~174 MiB for JhengHei/MingLiU/MS Gothic/
+  # Yu Gothic/Malgun) and a zh-CN Word document does not need them.
   slimZhCn = [
+    "arial"
+    "bahnschrift"
+    "calibri"
+    "cambria"
+    "cambria-math"
+    "candara"
+    "comic-sans-ms"
+    "consolas"
+    "constantia"
+    "corbel"
+    "courier-new"
     "dengxian"
     "fangsong"
+    "franklin-gothic-medium"
+    "gabriola"
+    "georgia"
+    "impact"
+    "ink-free"
     "kaiti"
+    "lucida-console"
+    "lucida-sans-unicode"
+    "marlett"
+    "microsoft-sans-serif"
     "microsoft-yahei"
+    "palatino-linotype"
+    "segoe-icons"
+    "segoe-print"
+    "segoe-script"
+    "segoe-ui"
+    "segoe-ui-symbols"
+    "segoe-ui-variable"
     "simhei"
     "simsun"
+    "sitka"
+    "sylfaen"
+    "symbol"
+    "tahoma"
+    "times-new-roman"
+    "trebuchet-ms"
+    "verdana"
+    "webdings"
+    "wingdings"
   ];
 }

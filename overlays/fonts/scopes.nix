@@ -15,12 +15,18 @@
 }:
 let
   inherit (lib)
+    elem
     makeScope
     mapAttrs'
     nameValuePair
     packagesFromDirectoryRecursive
     removeAttrs
     ;
+
+  # Windows edition splits shared with the top-level aggregates
+  # (overlays/fonts/aggregates.nix); the rationale for each list lives in
+  # the manifest itself.
+  windowsEditions = import ./windows-fonts-editions.nix;
 
   mkFontScope =
     {
@@ -103,6 +109,12 @@ let
         "mkMicrosoftFontDerivation"
         "windows-fonts"
       ];
+
+      # Edition splits as derivations. Resolving the manifest names against
+      # packageScope fails loudly if the manifest and the tree drift apart.
+      windowsEnUsExcluded = map (n: packageScope.${n}) windowsEditions.enUsExcluded;
+      windowsSlimCore = map (n: packageScope.${n}) windowsEditions.slimCore;
+      windowsSlimZhCn = map (n: packageScope.${n}) windowsEditions.slimZhCn;
     in
     removeAttrs packageScope [
       "builder"
@@ -111,6 +123,23 @@ let
     // {
       combine = link fontPackages "windows-fonts";
       combine' = link fontPackages;
+
+      # Edition aggregates, addressable as microsoftPackages.<name> as well
+      # as the top-level registration in overlays/fonts/aggregates.nix.
+      # Same split semantics: en-US packs none of the zh-CN-only set
+      # (SimHei, KaiTi, and FangSong which are Windows 7-era legacy fonts,
+      # plus DengXian), while the slim editions keep only the faces Word's
+      # default templates and common documents reference.
+      windows-fonts-zh-cn = link fontPackages "windows-fonts-zh-cn" (_: true);
+      windows-fonts-en-us = link fontPackages "windows-fonts-en-us" (
+        drv: !(elem drv windowsEnUsExcluded)
+      );
+      windows-fonts-en-us-slim = link fontPackages "windows-fonts-en-us-slim" (
+        drv: elem drv windowsSlimCore
+      );
+      windows-fonts-zh-cn-slim = link fontPackages "windows-fonts-zh-cn-slim" (
+        drv: elem drv windowsSlimZhCn
+      );
     };
 in
 mapAttrs' (vendor: attrs: nameValuePair "${vendor}Packages" (mkVendorScope vendor attrs)) vendors
