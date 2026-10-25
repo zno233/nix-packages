@@ -344,6 +344,14 @@ in
               set -eu
               state=/var/lib/honk
               src=${lib.escapeShellArg cfg.assetsPath}
+              # Checked at start, not at eval: the default assetsPath points
+              # into a built symlinkJoin, so pathExists in an assertion would
+              # force the asset build during evaluation (breaking
+              # `nix flake check --no-build` on a cold store).
+              if [ ! -d "$src" ]; then
+                echo "honk: assets path $src does not exist; set services.honk-core.assetsPath" >&2
+                exit 1
+              fi
               for name in geoip.dat geosite.dat; do
                 if [ ! -e "$state/$name" ] && [ -e "$src/$name" ]; then
                   ${pkgs.coreutils}/bin/cp -L "$src/$name" "$state/$name"
@@ -400,14 +408,6 @@ in
           };
 
         assertions = [
-          {
-            assertion = lib.pathExists (toString (genAssetsDrv cfg.assets) + "/share/v2ray");
-            message = ''
-              Packages in `assets` has no preset path `/share/v2ray` included.
-              Please set `assetsPath` instead.
-            '';
-          }
-
           {
             assertion =
               let
