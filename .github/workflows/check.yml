@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - uses: cachix/install-nix-action@v31.11.1
+      - uses: cachix/install-nix-action@v31.11.2
         with:
           # No install_url pin: Nix follows the action's bundled default, so
           # Dependabot's action bumps also carry the Nix version forward.
