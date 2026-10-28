@@ -11,6 +11,7 @@
 {
   lib,
   scopes,
+  projectRoot,
 }:
 let
   inherit (lib) elem;
@@ -24,24 +25,31 @@ let
     tsangertype-freefont-license
     ;
 
+  # Only the scopes reachable from the filtered aggregates below; the
+  # uniform `<vendor>-fonts` aggregates are derived from the discovered
+  # vendor set (vendor-names.nix) instead of being listed here one by one.
   inherit (scopes)
-    alibabaPackages
-    alimamaPackages
-    applePackages
-    buttaiwanPackages
-    dingtalkPackages
     foundertypePackages
-    hanwangPackages
     huaweiPackages
-    justfontPackages
     microsoftPackages
-    taobaoPackages
-    tianhengPackages
-    trionestypePackages
     tsangertypePackages
-    xiaomiPackages
-    znoPackages
     ;
+
+  fontVendors = import ./vendor-names.nix {
+    inherit
+      lib
+      projectRoot
+      ;
+  };
+
+  # vendor-names.nix and scopes.nix derive from the same directory
+  # listing, but the scope lookup stays explicit so any future drift
+  # between the two fails with a clear attribute error.
+  uniformScopes = lib.listToAttrs (
+    map (
+      vendor: lib.nameValuePair (fontVendors.aggregateName vendor) scopes.${fontVendors.scopeName vendor}
+    ) fontVendors.names
+  );
 
   all = _: true;
 
@@ -93,26 +101,6 @@ let
   mkAggregate =
     name: scope: predicate:
     scope.combine' name predicate;
-
-  # Aggregates that contain every derivation in their vendor scope.
-  allOfScope = {
-    alibaba-fonts = alibabaPackages;
-    alimama-fonts = alimamaPackages;
-    apple-fonts = applePackages;
-    buttaiwan-fonts = buttaiwanPackages;
-    dingtalk-fonts = dingtalkPackages;
-    foundertype-fonts = foundertypePackages;
-    hanwang-fonts = hanwangPackages;
-    huawei-fonts = huaweiPackages;
-    justfont-fonts = justfontPackages;
-    taobao-fonts = taobaoPackages;
-    tianheng-fonts = tianhengPackages;
-    trionestype-fonts = trionestypePackages;
-    tsangertype-fonts = tsangertypePackages;
-    windows-fonts = microsoftPackages;
-    xiaomi-fonts = xiaomiPackages;
-    zno-fonts = znoPackages;
-  };
 
   # Aggregates that select a subset of their vendor scope.
   filteredOfScope = [
@@ -191,7 +179,12 @@ let
   ];
 
   packages =
-    lib.mapAttrs (name: scope: mkAggregate name scope all) allOfScope
+    lib.mapAttrs (name: scope: mkAggregate name scope all) uniformScopes
+    // {
+      # The microsoft scope keeps its historical windows-fonts aggregate
+      # name instead of a `microsoft-fonts` one.
+      windows-fonts = mkAggregate "windows-fonts" microsoftPackages all;
+    }
     // lib.listToAttrs (
       lib.map (
         {
@@ -204,8 +197,13 @@ let
     );
 
   # Static manifest: only the attrset keys and the record names are forced
-  # here, so this line is safe to evaluate with a stubbed `scopes`.
-  names = lib.attrNames allOfScope ++ lib.catAttrs "name" filteredOfScope;
+  # here, so this line is safe to evaluate with a stubbed `scopes`. The
+  # uniform names come straight from the discovered vendor set (never
+  # touching `scopes`), and must stay equal to the keys of `packages` by
+  # construction — flake.nix resolves each name against the overlaid
+  # package set and fails loudly on drift.
+  names =
+    builtins.attrNames uniformScopes ++ [ "windows-fonts" ] ++ lib.catAttrs "name" filteredOfScope;
 
   # Packages promoted out of their vendor scope to the plain package set,
   # for scopes where a single package makes the scope layer pointless

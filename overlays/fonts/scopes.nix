@@ -16,8 +16,8 @@
 let
   inherit (lib)
     elem
+    listToAttrs
     makeScope
-    mapAttrs'
     nameValuePair
     packagesFromDirectoryRecursive
     removeAttrs
@@ -27,6 +27,22 @@ let
   # (overlays/fonts/aggregates.nix); the rationale for each list lives in
   # the manifest itself.
   windowsEditions = import ./windows-fonts-editions.nix;
+
+  # Vendor set is discovered from packages/fonts itself (vendor-names.nix),
+  # so an upstream-vendored font family goes live with just a sync. The
+  # only per-vendor override is apple hiding its helper derivation.
+  fontVendors = import ./vendor-names.nix {
+    inherit
+      lib
+      projectRoot
+      ;
+  };
+
+  vendorArgs = {
+    apple = {
+      remove = [ "fontPackage" ];
+    };
+  };
 
   mkFontScope =
     {
@@ -50,36 +66,14 @@ let
       combine' = link packages;
     };
 
-  # Every vendor directory maps to `<vendor>Packages`; only the apple scope
-  # needs to hide its helper derivation.
-  vendors = {
-    alibaba = { };
-    alimama = { };
-    apple = {
-      remove = [ "fontPackage" ];
-    };
-    buttaiwan = { };
-    dingtalk = { };
-    foundertype = { };
-    hanwang = { };
-    huawei = { };
-    justfont = { };
-    taobao = { };
-    tianheng = { };
-    trionestype = { };
-    tsangertype = { };
-    xiaomi = { };
-    zno = { };
-  };
-
   mkVendorScope =
-    vendor: attrs:
+    vendor:
     mkFontScope (
       {
-        aggregateName = "${vendor}-fonts";
+        aggregateName = fontVendors.aggregateName vendor;
         directory = projectRoot + /packages/fonts/${vendor};
       }
-      // attrs
+      // vendorArgs.${vendor} or { }
     );
 
   microsoftPackages =
@@ -142,7 +136,9 @@ let
       );
     };
 in
-mapAttrs' (vendor: attrs: nameValuePair "${vendor}Packages" (mkVendorScope vendor attrs)) vendors
+listToAttrs (
+  map (vendor: nameValuePair (fontVendors.scopeName vendor) (mkVendorScope vendor)) fontVendors.names
+)
 // {
   inherit microsoftPackages;
 }

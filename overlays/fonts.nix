@@ -24,7 +24,10 @@ let
   # overlays/fonts/aggregates.nix): evaluating it must not force any scope
   # value, so the manifest-only import runs with `scopes = null`.
   manifest = import ./fonts/aggregates.nix {
-    inherit lib;
+    inherit
+      lib
+      projectRoot
+      ;
     scopes = null;
   };
 in
@@ -85,7 +88,11 @@ in
       };
 
       aggregates = import ./fonts/aggregates.nix {
-        inherit lib scopes;
+        inherit
+          lib
+          projectRoot
+          scopes
+          ;
       };
 
       # Vendor packages promoted past their scope, addressed as `pkgs.<name>`.
