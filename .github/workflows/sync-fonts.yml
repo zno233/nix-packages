@@ -34,10 +34,13 @@ jobs:
       - name: Rsync vendor trees
         # packages/fonts/<vendor> mirrors the upstream byte-for-byte, except
         # the locally maintained apple/, zno/, and microsoft/ trees, which
-        # survive --delete via the excludes. tools/gen-ms-sources is local
-        # too (upstream has none): regenerate its sources.nix manually with
-        # tools/gen-ms-sources/gen.sh when the upstream microsoft tree
-        # changes.
+        # survive --delete via the excludes. Vendor registration is
+        # automatic (overlays/fonts/vendor-names.nix derives the scopes and
+        # `<vendor>-fonts` aggregates from the directory listing), so a new
+        # upstream vendor needs no overlay edit. tools/gen-ms-sources is
+        # local too (upstream has none): regenerate its sources.nix
+        # manually with tools/gen-ms-sources/gen.sh when the upstream
+        # microsoft tree changes.
         #
         # Upstream is not fully nixfmt-formatted, so run the repo formatter
         # after every sync to keep the tree constant for review.
@@ -49,10 +52,21 @@ jobs:
 
       - name: Detect changes
         id: diff
+        # Capture the changelist before the commit: once committed, index
+        # == HEAD and `git diff --cached` is empty, which used to blind the
+        # Verify step entirely (it silently skipped the per-vendor builds).
+        # Everything is staged here, so the output stays complete for
+        # paths the Verify step filters down to.
         run: |
           git add -A
-          if [ -n "$(git status --porcelain)" ]; then
+          files="$(git diff --cached --name-only)"
+          if [ -n "$files" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "files<<SYNC_DIFF_EOF"
+              echo "$files"
+              echo "SYNC_DIFF_EOF"
+            } >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
@@ -68,19 +82,28 @@ jobs:
         # The runner store is cold every run, so only pay the font
         # re-download cost when the tree actually changed. --no-build
         # already evaluates every package output (including apple-fonts),
-        # and the staged diff names the upstream vendors whose aggregate
-        # is actually built — locally maintained trees (apple, zno) get
-        # the same treatment whenever their copies change here.
+        # and the changelist captured in the Detect step names the upstream
+        # vendors whose aggregate is actually built — locally maintained
+        # trees (apple, zno) get the same treatment whenever their copies
+        # change here. Registration is derived from the directory tree, so
+        # an aggregate for every changed vendor must exist; a missing one
+        # fails `nix build` evaluation loudly.
         if: steps.diff.outputs.changed == 'true'
         run: |
           set -euo pipefail
           nix flake check --no-build --no-update-lock-file --no-write-lock-file
 
+          # Vendor names are derived inline in the for header so the word
+          # splitting is command-substitution based (reliable across
+          # shells); a vendor whose directory the sync deleted (upstream
+          # removals survive --delete here) simply yields no build.
           builds=""
-          for vendor in $(git diff --cached --name-only \
-              | grep '^packages/fonts/' | cut -d/ -f3 | sort -u || true); do
+          for vendor in $(awk -F/ '$1 == "packages" && $2 == "fonts" { print $3 }' \
+              <<<"${{ steps.diff.outputs.files }}" | sort -u); do
             # every vendor directory registers a `<vendor>-fonts` aggregate
-            [ -d "packages/fonts/$vendor" ] && builds="$builds .#$vendor-fonts"
+            if [ -d "packages/fonts/$vendor" ]; then
+              builds="$builds .#$vendor-fonts"
+            fi
           done
           if [ -n "$builds" ]; then
             nix build $builds --no-link \
