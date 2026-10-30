@@ -86,6 +86,15 @@ stdenv.mkDerivation (finalAttrs: {
       --replace-fail 'Exec="Axolotl Launcher"' "Exec=$out/bin/axolotl-launcher"
 
     cp -r usr/share/icons $out/share/icons
+    # spaced icon filenames break hicolor cache generation in
+    # user-environment builds; flatten every spaced icon file, then
+    # point Icon= at the result
+    find "$out/share/icons" -type f -name '* *' | while read -r f; do
+      mv "$f" "$(dirname "$f")/$(basename "$f" | tr 'A-Z ' 'a-z-')"
+    done
+    [[ -z $(find "$out/share/icons" -type f -name '* *') ]]
+    substituteInPlace "$out/share/applications/axolotl-launcher.desktop" \
+      --replace-fail 'Icon=Axolotl Launcher' 'Icon=axolotl-launcher'
 
     # dlopened libs are absent from rpath (nothing links them), so the fixup
     # phase cannot discover them either — hand them to the loader directly.

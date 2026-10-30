@@ -25,9 +25,11 @@
 
 [meta]
 # App directories not driven by nix-update because their updates run
-# through a rule here (honk's single pin feeds the honk-stock variant
-# too, and fcitx5-theme-collect follows a rolling HEAD).
-managed = ["honk", "honk-stock", "fcitx5-theme-collect"]
+# through a rule here (honk's single pin feeds the honk-stock variant too,
+# fcitx5-theme-collect follows a rolling HEAD, and axolotl-launcher
+# releases through the Update Server — under nix-update a single run
+# would refresh only the running platform's hash).
+managed = ["honk", "honk-stock", "fcitx5-theme-collect", "axolotl-launcher"]
 
 # Extra nix-update flags per app directory.
 [meta.nix-update]
@@ -147,3 +149,48 @@ validate = "^https://devimages-cdn\\.apple\\.com/design/resources/download/.*\\.
 [apple.pin-hash]
 pattern = '    hash = "(.*)";'
 value = "{pin-url:dmghash}"
+
+# Axolotl Launcher publishes installers through its own Update Server (the
+# same feed the official website's download section consumes), so no
+# nix-update version fetcher can see it. This rule replays the official
+# catalog — https://update.axlmc.org/api/downloads/latest?channel=release —
+# which names the version and, per installer, the sha256 of every artifact,
+# so the CDN deb is never downloaded just to be hashed (the catalog hash is
+# the same value the launcher's own updater verifies). The regexes match
+# the raw catalog document; the deb objects are flat, so [^}]* stays
+# inside them. Both published debs (amd64/arm64) are replayed.
+[axolotl-launcher]
+package = "packages/apps/axolotl-launcher/package.nix"
+commit = "axolotl-launcher: {old.pin-version} -> {axolotl-version}"
+
+[axolotl-launcher.catalog]
+url = "https://update.axlmc.org/api/downloads/latest?channel=release"
+
+[axolotl-launcher.axolotl-version]
+doc = "catalog"
+regex = '"version":"([0-9][0-9A-Za-z.+-]*)"'
+validate = "^[0-9][0-9A-Za-z.+-]*$"
+
+[axolotl-launcher.sum-amd64]
+doc = "catalog"
+regex = '"filename":"Axolotl\.Launcher_{axolotl-version}_amd64\.deb"[^}]*?"sha256":"([0-9a-f]{64})"'
+validate = "^[0-9a-f]{64}$"
+transform = "sri"
+
+[axolotl-launcher.sum-arm64]
+doc = "catalog"
+regex = '"filename":"Axolotl\.Launcher_{axolotl-version}_arm64\.deb"[^}]*?"sha256":"([0-9a-f]{64})"'
+validate = "^[0-9a-f]{64}$"
+transform = "sri"
+
+[axolotl-launcher.pin-version]
+pattern = '  version = "(.*)";'
+value = "{axolotl-version}"
+
+[axolotl-launcher.pin-hash-amd64]
+pattern = '  hashes\.x86_64-linux = "(.*)";'
+value = "{sum-amd64}"
+
+[axolotl-launcher.pin-hash-arm64]
+pattern = '  hashes\.aarch64-linux = "(.*)";'
+value = "{sum-arm64}"
