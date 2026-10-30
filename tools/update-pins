@@ -35,7 +35,6 @@ import subprocess
 import sys
 import tempfile
 import tomllib
-import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -52,13 +51,26 @@ def fail(msg: str) -> None:
 
 
 def fetch(url: str, retries: int = 5) -> bytes:
-    last: Exception | None = None
+    # curl, not urllib: python's TLS stack gets dropped by some bot-aware
+    # CDNs (connection resets/garbled handshakes) while curl plays fine;
+    # Hasher.sri_of likewise defaults to curl.
+    last: str | None = None
     for _ in range(retries):
-        try:
-            with urllib.request.urlopen(url, timeout=120) as resp:
-                return resp.read()
-        except Exception as err:  # noqa: BLE001
-            last = err
+        res = subprocess.run(
+            [
+                "curl",
+                "-fsSL",
+                "--connect-timeout",
+                "30",
+                "-A",
+                "nix-packages/update-pins",
+                url,
+            ],
+            capture_output=True,
+        )
+        if res.returncode == 0:
+            return res.stdout
+        last = res.stderr.decode(errors="replace")[-300:]
     fail(f"could not fetch {url}: {last}")
 
 
