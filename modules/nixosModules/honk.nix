@@ -4,6 +4,8 @@
 # daeuniverse honk module (official style), with:
 # - package via mkPackageOption pkgs "honk" (this flake's overlay)
 # - ui option and the api.dae/doona native-API wiring
+# - optional database-backed configuration store (--store db) for doona's
+#   import and revisions
 {
   config,
   lib,
@@ -197,6 +199,29 @@ in
           page. All native_api fields are restart-required.
         '';
       };
+
+      storeDb = mkEnableOption ''
+        the database-backed configuration store (`--store db`), which enables
+        doona's export, import and revisions: the administered `.dae` sources
+        are kept as revisions in `/var/lib/honk/state/honk.db`. File mode can
+        still export; import and the revision routes are db-mode-only. The
+        first db-mode start imports the config file and records revision 1
+        (needs the native API with `config_write: true` and a credential —
+        both provided by the module's native_api wiring). Afterwards the
+        recorded revision drives the engine and the config file is ignored:
+        startup runs the revision, and so does a reload — `honk reload`
+        (SIGHUP) re-activates honk's startup path, db mode's active revision,
+        not the config file. Regenerating `config` therefore reaches honk
+        only through the import API (what doona's configuration-import
+        button calls: `POST /api/v1/x-honk/config/import` with
+        `{"replace": true}` and an `Idempotency-Key`; a plain curl works —
+        the engine re-reads the config file) or by activating a recorded
+        revision. Db mode runs without the Clash API — a non-empty
+        `experimental.clash_api.external_controller` refuses startup. To
+        leave the mode, run `honk-core config export --out <file>` (listener
+        secrets restored unless `--without-secrets`; refuses to overwrite an
+        existing file), then switch this option off and restart.
+      '';
     };
   };
 
@@ -369,6 +394,11 @@ in
               after = [ "network-online.target" ];
               # Force a reload when the inline config text changes; external
               # configFile edits are picked up via `honk reload` manually.
+              # With storeDb, the recorded revision overrides the file at
+              # startup AND on reload: SIGHUP re-activates the active
+              # revision, never the file. Imported content enters the db only
+              # through the import API (doona's config import, replace: true)
+              # or by activating a revision.
               reloadTriggers = optional (cfg.config != null) cfg.config;
 
               serviceConfig = {
@@ -383,7 +413,11 @@ in
                 ExecStart = [
                   ""
                   "${honkBin} -c ${configPath} --disable-timestamp"
-                ];
+                ]
+                # db mode stores the administered .dae sources as revisions
+                # in /var/lib/honk/state/honk.db (doona's import and
+                # revisions need this); file mode keeps only export.
+                ++ optional cfg.storeDb "--store db";
                 # reload asks the running instance via /run/honk-core.lock and
                 # ignores -c, so no configPath here.
                 ExecReload = "${honkBin} reload";
