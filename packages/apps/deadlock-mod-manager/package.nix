@@ -25,11 +25,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "deadlock-mod-manager";
-  version = "2.2.0";
+  version = "2.3.0";
 
   src = fetchurl {
     url = "https://github.com/deadlock-mod-manager/deadlock-mod-manager/releases/download/v${finalAttrs.version}/Deadlock.Mod.Manager_${finalAttrs.version}_amd64.deb";
-    hash = "sha256-Fs0Rda5Qwz/EDzQNZ22FIc6uHFfNLcUZQLWLXGNzWRY=";
+    hash = "sha256-LP5Apu9X67MGp450WNrWx9ICHOd1NjH42JhehpFZH5Q=";
   };
 
   nativeBuildInputs = [
