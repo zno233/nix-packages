@@ -8,9 +8,9 @@
 # -stock-full asset). Flat one-line entries keep each hash matched by
 # exactly one update-pins recipe (tools/update-pins.toml).
 {
-  version = "v0.1.0-beta.4";
-  hashes.x86_64-linux.full = "sha256-ReS3l12XG/aROlpK2aK1aTjdQnkwsjT+xRJXUmOrhL0=";
-  hashes.x86_64-linux.stock = "sha256-LLj/GlFLbEt8nQbw9AoskNjVCVb+hO43G8mfnBE5Sd0=";
-  hashes.aarch64-linux.full = "sha256-YyDuKJ5PIlGxHoC3Oz9g5ExVyVH8AblCCse5lxsVBO4=";
-  hashes.aarch64-linux.stock = "sha256-IcRLB985goAHKVrbTJRuHRtzylSPdFNfjPNTmy+dIDs=";
+  version = "v0.1.0-beta.5";
+  hashes.x86_64-linux.full = "sha256-eDWxbK4IVZBZJ57T8AmLdGBrZaBrjoMcfVvtqmmWc4Q=";
+  hashes.x86_64-linux.stock = "sha256-XO1sQkqh6qpSwtwmERrF21ogZIupTdVcAMFDw/xybQ4=";
+  hashes.aarch64-linux.full = "sha256-RCdBwPRZAXFMBb1i+LYkKCXMaF2fszi64C0Qdpi4BlY=";
+  hashes.aarch64-linux.stock = "sha256-Felc85mv+2iA3tcKY/KfXos2emZ2nDqIS+8GC9rczkY=";
 }
