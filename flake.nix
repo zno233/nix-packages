@@ -73,6 +73,7 @@
       # modules/ is partitioned by flake output key (nixosModules today,
       # e.g. homeManagerModules later) for symmetric growth.
       honkModule = ./modules/nixosModules/honk.nix;
+      windinputModule = ./modules/nixosModules/windinput.nix;
     in
     {
       inherit overlays;
@@ -83,18 +84,24 @@
 
       nixosModules = {
         honk = honkModule;
+        windinput = windinputModule;
 
         # Collection-style default: it contains every module of this flake
-        # today (just honk) and can grow without misleading consumers.
+        # today (honk and windinput) and can grow without misleading
+        # consumers.  Both modules are opt-in through
+        # services.honk-core.enable / programs.windinput.enable.
         default = {
-          imports = [ honkModule ];
+          imports = [
+            honkModule
+            windinputModule
+          ];
         };
       };
 
       # Evaluation-only smoke test: `nix flake check` evaluates every
       # nixosConfiguration's toplevel without building it, so module edits
-      # breaking eval surface in CI. Only bootstrapped once; extend the
-      # module list here if more modules appear.
+      # breaking eval surface in CI.  Keep the module list in sync with
+      # `nixosModules` above.
       nixosConfigurations = lib.genAttrs [ "x86_64-linux" ] (
         system:
         lib.nixosSystem {
@@ -102,11 +109,16 @@
           pkgs = pkgsFor.${system};
           modules = [
             honkModule
+            windinputModule
             {
               services.honk-core.enable = true;
               # Minimal honest payload: the module asserts exactly one of
               # `config`/`configFile` is set.
               services.honk-core.config = "";
+
+              # windinput pulls the addon into the fcitx5 wrapper and sets the
+              # launcher environment variables; eval-only here.
+              programs.windinput.enable = true;
             }
             # Skeleton to pass the stock NixOS assertions without implying a
             # real machine — this configuration is eval-only, never built.
