@@ -1,15 +1,14 @@
 # Axolotl Launcher — repackaged official prebuilt .deb release (Tauri binary;
 # not rebuilt: webkitgtk/gtk3 stacks are distro-shared upstream). Both amd64
 # and arm64 debs are published.
-# Download comes from the official Update Server (Cloudflare edge behind
-# update.axlmc.org / dist.axlmc.org), which is how the official website's
-# download section serves installers; the catalog also carries the sha256
-# of every installer, which tools/update-pins replays into the hashes below
-# (nix-update cannot drive this URL, and a single run of it would only
-# refresh one platform's hash anyway). autoPatchelfHook handles ELF NEEDED
-# entries; libs that the WebView dlopens at runtime (no NEEDED entries,
-# invisible to autoPatchelf) go through the wrapper's LD_LIBRARY_PATH /
-# GIO_EXTRA_MODULES.
+# Download prefers the canonical GitHub release, with the official Update
+# Server (Cloudflare edge behind dist.axlmc.org) as fallback; the catalog
+# also carries the sha256 of every installer, which tools/update-pins
+# replays into the hashes below (nix-update cannot drive these URLs, and a
+# single run of it would only refresh one platform's hash anyway).
+# autoPatchelfHook handles ELF NEEDED entries; libs that the WebView dlopens
+# at runtime (no NEEDED entries, invisible to autoPatchelf) go through the
+# wrapper's LD_LIBRARY_PATH / GIO_EXTRA_MODULES.
 {
   lib,
   stdenv,
@@ -45,11 +44,14 @@ stdenv.mkDerivation (finalAttrs: {
   version = "1.10.5";
 
   src = fetchurl {
-    # official website CDN (Axolotl Launcher update server catalog):
-    # https://update.axlmc.org/api/downloads/latest?channel=release
-    url = "https://update.axlmc.org/dist/${finalAttrs.version}/Axolotl.Launcher_${finalAttrs.version}_${
-      debArch.${stdenv.hostPlatform.system}
-    }.deb";
+    urls = [
+      "https://github.com/Axolotl-Launcher/Axolotl/releases/download/v${finalAttrs.version}/Axolotl.Launcher_${finalAttrs.version}_${
+        debArch.${stdenv.hostPlatform.system}
+      }.deb"
+      "https://dist.axlmc.org/dist/${finalAttrs.version}/Axolotl.Launcher_${finalAttrs.version}_${
+        debArch.${stdenv.hostPlatform.system}
+      }.deb"
+    ];
     hash = hashes.${stdenv.hostPlatform.system};
   };
 
