@@ -79,12 +79,12 @@ stdenv.mkDerivation (
   in
   {
     pname = "watt-toolkit-bin";
-    version = "3.1.0";
+    version = "3.2.0";
 
     src = fetchurl {
       # "++" must be URL-encoded as %2B%2B
       url = "https://github.com/BeyondDimension/SteamTools/releases/download/${finalAttrs.version}/Steam%2B%2B_v${finalAttrs.version}_linux_x64.tgz";
-      hash = "sha256-+5m81PpqxkkihwD5CIGf4ZoWzCmoZq1D0oc+UEpBeD8=";
+      hash = "sha256-VnJXV+XgswFklZ8o84lmp9YirOF/ELZ54OFtcaTa2/w=";
     };
 
     strictDeps = true;
