@@ -66,6 +66,13 @@ jobs:
             flags=$(jq -r --arg pkg "$pkg" '.nix_update[$pkg] // [] | join(" ")' <<<"$config")
 
             echo "::group::Update $pkg"
+            # Nix >= 2.35 copies flake sources to the store lazily, so the
+            # /nix/store/...-source path reported by `nix flake metadata` may
+            # never be created. nix-update evaluates the flake through that
+            # path, so materialise the current tree first.
+            # TODO: remove once nix-update prefetches the flake itself.
+            # https://github.com/Mic92/nix-update/issues/687
+            nix flake prefetch . >/dev/null
             nix run .#nix-update -- --commit --flake $flags "$pkg" || {
               failed_pkgs="$failed_pkgs $pkg"
             }
