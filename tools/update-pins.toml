@@ -26,10 +26,11 @@
 [meta]
 # App directories not driven by nix-update because their updates run
 # through a rule here (honk's single pin feeds the honk-stock variant too,
-# fcitx5-theme-collect follows a rolling HEAD, and axolotl-launcher
-# releases through the Update Server — under nix-update a single run
-# would refresh only the running platform's hash).
-managed = ["honk", "honk-stock", "fcitx5-theme-collect", "axolotl-launcher"]
+# fcitx5-theme-collect follows a rolling HEAD, axolotl-launcher releases
+# through the Update Server, and mark-shot publishes one tarball per
+# architecture — under nix-update a single run would refresh only the
+# running platform's hash).
+managed = ["honk", "honk-stock", "fcitx5-theme-collect", "axolotl-launcher", "mark-shot"]
 
 # Extra nix-update flags per app directory.
 [meta.nix-update]
@@ -194,3 +195,52 @@ value = "{sum-amd64}"
 [axolotl-launcher.pin-hash-arm64]
 pattern = '  hashes\.aarch64-linux = "(.*)";'
 value = "{sum-arm64}"
+
+# mark-shot ships one native tarball per architecture and lists every
+# asset's sha256 in the release body, so replaying the release picks up
+# both hashes without downloading the 60 MB of tarballs.
+[mark-shot]
+package = "packages/apps/mark-shot/package.nix"
+commit = "mark-shot: {old.pin-version} -> {version}"
+
+[mark-shot.release]
+url = "https://api.github.com/repos/jswysnemc/mark-shot/releases/latest"
+json = true
+
+[mark-shot.tag]
+doc = "release"
+json_path = "tag_name"
+validate = "^v[0-9][0-9A-Za-z.-]*$"
+
+[mark-shot.version]
+doc = "tag"
+regex = '^v([0-9][0-9A-Za-z.+-]*)$'
+validate = "^[0-9][0-9A-Za-z.+-]*$"
+
+[mark-shot.body]
+doc = "release"
+json_path = "body"
+
+[mark-shot.hash-x86]
+doc = "body"
+regex = '\| \[mark-shot-native-[0-9][^\]]*-linux-x86_64\.tar\.gz\]\([^)]*\) \| [0-9]+ \| `([0-9a-f]{64})` \|'
+validate = "^[0-9a-f]{64}$"
+transform = "sri"
+
+[mark-shot.hash-arm64]
+doc = "body"
+regex = '\| \[mark-shot-native-[0-9][^\]]*-linux-aarch64\.tar\.gz\]\([^)]*\) \| [0-9]+ \| `([0-9a-f]{64})` \|'
+validate = "^[0-9a-f]{64}$"
+transform = "sri"
+
+[mark-shot.pin-version]
+pattern = '  version = "(.*)";'
+value = "{version}"
+
+[mark-shot.pin-hash-x86]
+pattern = '    x86_64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
+value = "{hash-x86}"
+
+[mark-shot.pin-hash-arm64]
+pattern = '    aarch64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
+value = "{hash-arm64}"
