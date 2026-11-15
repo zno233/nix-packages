@@ -19,6 +19,12 @@
   nssTools, # certutil — initialises ~/.pki/nssdb and imports the SteamTools CA
   jq, # parses the update API responses
   zenity, # GUI dialogs
+  # Spawned directly by the app itself (not probed by environment_check.sh):
+  # the Linux system-proxy backend runs `gsettings set/get org.gnome.system.proxy.*`
+  # when starting acceleration; a missing binary surfaces as the
+  # "Failed to start gsettings" / ProxyStatusError toast
+  glib, # provides the gsettings CLI
+  gsettings-desktop-schemas, # org.gnome.system.proxy.* schema definitions
   # ELF NEEDED or dlopen'd at runtime (see dlopenLibs below):
   icu,
   openssl,
@@ -75,6 +81,9 @@ stdenv.mkDerivation (
       nssTools # certutil
       jq
       zenity
+      # Not probed by environment_check.sh: the app's own process starter
+      # resolves `gsettings` from PATH (execvp), so it must be injected here
+      glib
     ];
   in
   {
@@ -170,6 +179,7 @@ stdenv.mkDerivation (
       makeWrapper $out/opt/watt-toolkit/dotnet/dotnet $out/bin/watt-toolkit \
         --set DOTNET_ROOT $out/opt/watt-toolkit/dotnet \
         --prefix PATH : ${lib.makeBinPath runtimeTools} \
+        --set GSETTINGS_SCHEMA_DIR ${gsettings-desktop-schemas}/share/gsettings-schemas/${gsettings-desktop-schemas.name}/glib-2.0/schemas \
         --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath dlopenLibs}:$out/opt/watt-toolkit/native/linux-x64 \
         --run '${nssTools}/bin/certutil -d $HOME/.pki/nssdb -L >/dev/null 2>&1 || { mkdir -p -m 700 $HOME/.pki/nssdb; ${nssTools}/bin/certutil -d $HOME/.pki/nssdb -N --empty-password; }' \
         --add-flags $out/opt/watt-toolkit/assemblies/Steam++.dll
