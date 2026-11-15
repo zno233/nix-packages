@@ -30,6 +30,7 @@ Usage: tools/update-pins [--print-config] [rule ...]   (default: every rule)
 import glob
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -50,6 +51,20 @@ def fail(msg: str) -> None:
     raise RuntimeError(msg)
 
 
+def github_auth(url: str) -> list[str]:
+    """curl args authenticating api.github.com when a token is available.
+
+    The unauthenticated API allows 60 requests per hour per IP, and CI
+    runners share theirs, so the release/commit lookups start answering
+    403 well before an update run is done. GH_TOKEN is the name the
+    workflow exports; GITHUB_TOKEN covers manual runs.
+    """
+    if not url.startswith("https://api.github.com/"):
+        return []
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    return ["-H", f"Authorization: Bearer {token}"] if token else []
+
+
 def fetch(url: str, retries: int = 5) -> bytes:
     # curl, not urllib: python's TLS stack gets dropped by some bot-aware
     # CDNs (connection resets/garbled handshakes) while curl plays fine;
@@ -64,6 +79,7 @@ def fetch(url: str, retries: int = 5) -> bytes:
                 "30",
                 "-A",
                 "nix-packages/update-pins",
+                *github_auth(url),
                 url,
             ],
             capture_output=True,
@@ -71,6 +87,15 @@ def fetch(url: str, retries: int = 5) -> bytes:
         if res.returncode == 0:
             return res.stdout
         last = res.stderr.decode(errors="replace")[-300:]
+        if b"error: 403" in res.stderr:
+            # a 4xx will not get better by retrying; on the GitHub API it
+            # means the rate limit/auth failed
+            if url.startswith("https://api.github.com/"):
+                fail(
+                    f"could not fetch {url}: {last.strip()}"
+                    " (GitHub API rate limit; export GH_TOKEN to authenticate)"
+                )
+            break
     fail(f"could not fetch {url}: {last}")
 
 

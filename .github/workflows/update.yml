@@ -34,6 +34,11 @@ jobs:
 
       - name: Update packages
         id: update
+        env:
+          # api.github.com answers 403 once the shared runner IP burns
+          # through its 60 unauthenticated requests/hour, which update-pins
+          # hits while resolving rolling HEADs and release assets.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -u
           git config user.name "github-actions[bot]"
