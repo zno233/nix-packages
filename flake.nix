@@ -17,22 +17,27 @@
         "aarch64-darwin"
       ];
 
+      projectRoot = ./.;
+
       overlayLib = import ./lib { inherit lib; };
 
-      # The overlays directory exports a manifest named like the flake
-      # outputs: the composed overlay, the fonts aggregate names, and the
-      # app discovery helper shared with the overlay itself.
+      # The overlays and modules directories export manifests named like the
+      # flake outputs: the composed overlay, the fonts aggregate names, the
+      # app discovery helper shared with the overlay itself, and the module
+      # partitions.
       overlayManifest = import ./overlays {
-        inherit lib overlayLib;
-        projectRoot = ./.;
+        inherit lib overlayLib projectRoot;
       };
 
       appsManifest = import ./overlays/apps.nix {
-        inherit lib;
-        projectRoot = ./.;
+        inherit lib projectRoot;
       };
 
-      overlays.default = overlayManifest.overlays.default;
+      moduleManifest = import ./modules { inherit projectRoot; };
+
+      overlays = {
+        default = overlayManifest.overlays.default;
+      };
 
       # One nixpkgs instantiation per system, shared by every flake output.
       pkgsFor = lib.genAttrs systems (
@@ -44,25 +49,29 @@
         }
       );
 
+      # Every per-system output below is built through this, so the system
+      # set stays defined in one place.
+      eachSystem = f: lib.mapAttrs (system: pkgs: f system pkgs) pkgsFor;
+
       # nix-update 1.16.0 evaluates the flake through the store path
       # reported by `nix flake metadata`, which Nix >= 2.35 no longer
       # copies eagerly. nix-update also puts its own `nix` on PATH, so
       # pinning the workflow's Nix is not enough: override the `nix` it
       # bundles as well. TODO: drop once
       # https://github.com/Mic92/nix-update/issues/687 is fixed.
-      nixUpdateFor = lib.mapAttrs (
+      nixUpdateFor = eachSystem (
         _: pkgs:
         pkgs.nix-update.override {
           nix = pkgs.nixVersions.nix_2_34;
         }
-      ) pkgsFor;
+      );
 
       # Local applications are discovered by the logic shared with the
       # overlay (overlays/apps.nix): the same flatten, including the honk
       # variant re-exports; new apps still need no flake.nix edit.
       # The union stays lazy: no derivation may be forced while building
       # this set (nixpkgs re-applies overlays for every stdenv boot stage).
-      appPackages = lib.mapAttrs (_: pkgs: appsManifest.discover { inherit (pkgs) callPackage; }) pkgsFor;
+      appPackages = eachSystem (_: pkgs: appsManifest.discover { inherit (pkgs) callPackage; });
 
       # Font aggregates register themselves in overlays/fonts/aggregates.nix,
       # which exports both their derivations and a static name manifest.
@@ -72,7 +81,7 @@
       # manifest (flattenNames) and merged in the same way.
       fontNames = overlayManifest.aggregateNames ++ overlayManifest.flattenNames;
 
-      fontPackages = lib.mapAttrs (_: pkgs: lib.getAttrs fontNames pkgs) pkgsFor;
+      fontPackages = eachSystem (_: pkgs: lib.getAttrs fontNames pkgs);
 
       # Prebuilt apps are published for a subset of systems and throw when
       # forced elsewhere; the filter must be throw-tolerant so that a
@@ -83,10 +92,7 @@
           _: drv: (lib.tryEval (lib.meta.availableOn pkgs.stdenv.hostPlatform drv)).value or false
         );
 
-      # modules/ is partitioned by flake output key (nixosModules today,
-      # e.g. homeManagerModules later) for symmetric growth.
-      honkModule = ./modules/nixosModules/honk.nix;
-      windinputModule = ./modules/nixosModules/windinput.nix;
+      nixosModuleFiles = moduleManifest.nixosModules;
     in
     {
       inherit overlays;
@@ -95,34 +101,23 @@
       # derivation utilities and license metadata.
       lib = overlayLib;
 
-      nixosModules = {
-        honk = honkModule;
-        windinput = windinputModule;
-
+      nixosModules = nixosModuleFiles // {
         # Collection-style default: it contains every module of this flake
         # today (honk and windinput) and can grow without misleading
         # consumers.  Both modules are opt-in through
         # services.honk-core.enable / programs.windinput.enable.
-        default = {
-          imports = [
-            honkModule
-            windinputModule
-          ];
-        };
+        default.imports = builtins.attrValues nixosModuleFiles;
       };
 
       # Evaluation-only smoke test: `nix flake check` evaluates every
       # nixosConfiguration's toplevel without building it, so module edits
-      # breaking eval surface in CI.  Keep the module list in sync with
-      # `nixosModules` above.
+      # breaking eval surface in CI.
       nixosConfigurations = lib.genAttrs [ "x86_64-linux" ] (
         system:
         lib.nixosSystem {
           inherit system;
           pkgs = pkgsFor.${system};
-          modules = [
-            honkModule
-            windinputModule
+          modules = builtins.attrValues nixosModuleFiles ++ [
             {
               services.honk-core.enable = true;
               # Minimal honest payload: the module asserts exactly one of
@@ -150,60 +145,64 @@
       # `legacyPackages` over applying the overlay themselves.
       legacyPackages = pkgsFor;
 
-      packages = lib.mapAttrs (
+      packages = eachSystem (
         system: pkgs:
         # An app name (or honk-style variant name) colliding with a font
         # name would be silently resolved to the font by the merge below —
         # fail the evaluation instead. Both name sources are cheap to
         # enumerate (directory names and static manifests).
         assert lib.assertMsg (
-          lib.intersectLists (lib.attrNames appPackages.x86_64-linux) fontNames == [ ]
+          lib.intersectLists (lib.attrNames appPackages.${system}) fontNames == [ ]
         ) "flake.nix: an app name collides with a font aggregate or promoted vendor package";
         filterSupported pkgs (appPackages.${system} // fontPackages.${system})
-      ) pkgsFor;
+      );
 
       # Build the local applications (these are what `nix flake check`
       # builds). Font aggregates are excluded on purpose: building one
       # requires building its whole vendor font tree, so they are validated
       # by the font sync workflow and by the aggregate manifest above.
-      checks = lib.mapAttrs (system: pkgs: filterSupported pkgs appPackages.${system}) pkgsFor;
+      checks = eachSystem (system: pkgs: filterSupported pkgs appPackages.${system});
 
-      formatter = lib.mapAttrs (_: pkgs: pkgs.nixfmt-tree) pkgsFor;
+      formatter = eachSystem (_: pkgs: pkgs.nixfmt-tree);
 
       # Tools the workflows drive; app refs pin them to this flake's
       # locked nixpkgs instead of the mutable registry.
-      apps = lib.mapAttrs (system: pkgs: {
-        nix-update = {
-          type = "app";
-          program = "${nixUpdateFor.${system}}/bin/nix-update";
-        };
-        shellcheck = {
-          type = "app";
-          program = "${pkgs.shellcheck}/bin/shellcheck";
-        };
-        statix = {
-          type = "app";
-          program = "${pkgs.statix}/bin/statix";
-        };
-        deadnix = {
-          type = "app";
-          program = "${pkgs.deadnix}/bin/deadnix";
-        };
-      }) pkgsFor;
+      apps = eachSystem (
+        system: pkgs: {
+          nix-update = {
+            type = "app";
+            program = "${nixUpdateFor.${system}}/bin/nix-update";
+          };
+          shellcheck = {
+            type = "app";
+            program = "${pkgs.shellcheck}/bin/shellcheck";
+          };
+          statix = {
+            type = "app";
+            program = "${pkgs.statix}/bin/statix";
+          };
+          deadnix = {
+            type = "app";
+            program = "${pkgs.deadnix}/bin/deadnix";
+          };
+        }
+      );
 
-      devShells = lib.mapAttrs (system: pkgs: {
-        default = pkgs.mkShell {
-          packages =
-            with pkgs;
-            [
-              deadnix
-              nixfmt-tree
-              python3
-              shellcheck
-              statix
-            ]
-            ++ [ nixUpdateFor.${system} ];
-        };
-      }) pkgsFor;
+      devShells = eachSystem (
+        system: pkgs: {
+          default = pkgs.mkShell {
+            packages =
+              with pkgs;
+              [
+                deadnix
+                nixfmt-tree
+                python3
+                shellcheck
+                statix
+              ]
+              ++ [ nixUpdateFor.${system} ];
+          };
+        }
+      );
     };
 }
