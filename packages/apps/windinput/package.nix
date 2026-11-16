@@ -39,7 +39,7 @@ let
 
   hashes = {
     x86_64-linux = "sha256-ey8OKG5LW3yBWkaqvVXwF7lrVpB3pN8q15HEjJB6CBk=";
-    aarch64-linux = "sha256-4pX7Ix2BHnxJv7+50zRInAqilOHZuFfJJjjdQHd/Mzo=";
+    aarch64-linux = "sha256-4phZKvRd2HEmASLWcEIE7d7hXeh42zDzu6g8FMnhFiA=";
   };
 in
 stdenv.mkDerivation (finalAttrs: {
