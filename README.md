@@ -68,12 +68,13 @@ pinned commit via `GEN_MS_SOURCES_PIN`) after verifying that coverage.
 
 ## CI
 
-- `check.yml`: formatting (`nix fmt -- --fail-on-change`), `shellcheck` on
-  the shell sources, `statix`/`deadnix` Nix lint, and `nix flake check`
-  (which also evaluates the honk module through the smoke-test
-  `nixosConfigurations`) on push / PR
-- `update.yml`: daily flake.lock bump and package updates (apps via a
-  lockfile-pinned nix-update; pins without a releasable version follow the
+- `check.yml`: formatting (`nix fmt -- --fail-on-change`), the `tools/tests`
+  regression tests, `shellcheck` on the shell sources, `statix`/`deadnix`
+  Nix lint, an eval-only `--all-systems` flake check, and a build of the
+  x86_64 packages and `nixosConfigurations` smoke test on push / PR
+- `update.yml`: daily flake.lock bump and package updates (apps through the
+  flake's lockfile-pinned nix-update; packages whose upstream publishes
+  per-architecture assets, or has no releasable version, follow the
   `tools/update-pins.toml` recipes — the same file tells nix-update which
   packages to skip and which flags to use), plus a build of any font
   aggregates whose vendor tree a commit touched, pushed only after a
@@ -89,4 +90,5 @@ pinned commit via `GEN_MS_SOURCES_PIN`) after verifying that coverage.
 
 `nix fmt` (nixfmt via treefmt) and `nix flake check` are the base loop;
 `nix develop` provides `nixfmt-tree`, `statix`, `deadnix`, `shellcheck`,
-`python3`, and `nix-update`.
+`python3`, and `nix-update`; `python3 tools/tests/test-update-pins` exercises
+the pin rewriter against a local release document.

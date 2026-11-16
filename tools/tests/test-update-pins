@@ -1,0 +1,263 @@
+#!/usr/bin/env python3
+"""Regression tests for tools/update-pins.
+
+Each case assembles a throwaway tree around the real script (a rules file,
+a package to pin, and a file:// release document), so digest extraction,
+pin rewriting and the git commit message are exercised without the network.
+"""
+
+import importlib.machinery
+import importlib.util
+import json
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+# Importing the script under test must not leave __pycache__ in tools/.
+sys.dont_write_bytecode = True
+
+ROOT = Path(__file__).resolve().parents[2]
+SCRIPT = ROOT / "tools" / "update-pins"
+
+HEX = {
+    "x86_64": "0a4196985efcb022d60269dddf1b06eb883074b4fd2b1f31c870a8b8bd62bbf5",
+    "aarch64": "84ec84b06ecebe80dc4f32405b6511f02fb2b0914da0edef10011866fb0fe80e",
+}
+
+# The arch map sits above the hash table on purpose: a pin pattern that is
+# too loose must be caught rewriting these lines instead of the hashes.
+PACKAGE = """\
+{
+  version = "1.0.0";
+
+  arch = {
+    x86_64-linux = "x86_64";
+    aarch64-linux = "aarch64";
+  };
+
+  hashes = {
+    x86_64-linux = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    aarch64-linux = "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=";
+  };
+}
+"""
+
+RULES = """\
+[meta]
+managed = ["demo"]
+
+[meta.nix-update]
+demo = "--version=unstable"
+
+[demo]
+package = "packages/demo/package.nix"
+commit = "demo: {old.pin-version} -> {version}"
+
+[demo.release]
+url = "@RELEASE@"
+json = true
+
+[demo.tag]
+doc = "release"
+json_path = "tag_name"
+validate = "^v[0-9][0-9A-Za-z.-]*$"
+
+[demo.version]
+doc = "tag"
+regex = '^v([0-9][0-9A-Za-z.+-]*)$'
+validate = "^[0-9][0-9A-Za-z.+-]*$"
+
+[demo.hash-x86]
+doc = "release"
+digest_of = "demo-native-{version}-linux-x86_64.tar.gz"
+transform = "sri"
+
+[demo.hash-arm64]
+doc = "release"
+digest_of = "demo-native-{version}-linux-aarch64.tar.gz"
+transform = "sri"
+
+[demo.pin-version]
+pattern = '  version = "(.*)";'
+value = "{version}"
+
+[demo.pin-hash-x86]
+pattern = '    x86_64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
+value = "{hash-x86}"
+
+[demo.pin-hash-arm64]
+pattern = '    aarch64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
+value = "{hash-arm64}"
+"""
+
+
+# A misspelled field must be rejected before any pin is rewritten.
+BROKEN = RULES.replace(
+    "[demo.pin-version]",
+    '[demo.broken]\ndoc = "release"\njsonpth = "tag_name"\n\n[demo.pin-version]',
+)
+
+
+def load_script():
+    loader = importlib.machinery.SourceFileLoader("update_pins", str(SCRIPT))
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+def sri(hex_digest: str) -> str:
+    return subprocess.run(
+        ["nix", "hash", "to-sri", "--type", "sha256", hex_digest],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def release(tag: str, digests: dict[str, str | None]) -> dict:
+    return {
+        "tag_name": tag,
+        "assets": [
+            {
+                "name": f"demo-native-{tag[1:]}-linux-{arch}.tar.gz",
+                "digest": None if digest is None else f"sha256:{digest}",
+            }
+            for arch, digest in digests.items()
+        ],
+    }
+
+
+def make_tree(parent: Path, doc: dict, rules: str = RULES) -> Path:
+    tree = parent / f"case{len(list(parent.iterdir()))}"
+    (tree / "tools").mkdir(parents=True)
+    (tree / "packages" / "demo").mkdir(parents=True)
+    shutil.copy2(SCRIPT, tree / "tools" / "update-pins")
+    (tree / "packages" / "demo" / "package.nix").write_text(PACKAGE)
+    (tree / "release.json").write_text(json.dumps(doc))
+    rules = rules.replace("@RELEASE@", f"file://{tree / 'release.json'}")
+    (tree / "tools" / "update-pins.toml").write_text(rules)
+    git(tree, "init", "-q")
+    git(tree, "config", "user.email", "test@example.com")
+    git(tree, "config", "user.name", "Test")
+    git(tree, "add", "-A")
+    git(tree, "commit", "-qm", "init")
+    return tree
+
+
+def git(tree: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", *args], cwd=tree, check=True, capture_output=True, text=True
+    ).stdout
+
+
+def run(tree: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, str(tree / "tools" / "update-pins"), *args],
+        cwd=tree,
+        capture_output=True,
+        text=True,
+    )
+
+
+def expect(cond: bool, msg: str) -> None:
+    if not cond:
+        raise AssertionError(msg)
+
+
+def test_refresh(parent: Path) -> None:
+    tree = make_tree(parent, release("v1.1.0", HEX))
+    result = run(tree)
+    expect(result.returncode == 0, f"run failed: {result.stdout}{result.stderr}")
+    expect("demo: refreshed pins" in result.stdout, result.stdout)
+
+    text = (tree / "packages" / "demo" / "package.nix").read_text()
+    expect('  version = "1.1.0";' in text, "version not rewritten")
+    expect(f'    x86_64-linux = "{sri(HEX["x86_64"])}";' in text, "x86 hash wrong")
+    expect(f'    aarch64-linux = "{sri(HEX["aarch64"])}";' in text, "arm64 hash wrong")
+    expect('    x86_64-linux = "x86_64";' in text, "arch map was rewritten")
+    expect('    aarch64-linux = "aarch64";' in text, "arch map was rewritten")
+
+    expect(git(tree, "log", "-1", "--pretty=%s").strip() == "demo: 1.0.0 -> 1.1.0", "commit message")
+    changed = git(tree, "show", "--pretty=format:", "--name-only", "HEAD").strip()
+    expect(changed == "packages/demo/package.nix", f"unexpected files committed: {changed}")
+
+    count = git(tree, "rev-list", "--count", "HEAD").strip()
+    again = run(tree)
+    expect(again.returncode == 0, f"second run failed: {again.stdout}{again.stderr}")
+    expect("demo: up to date" in again.stdout, again.stdout)
+    expect(git(tree, "rev-list", "--count", "HEAD").strip() == count, "no-op run committed")
+    print("ok: refresh rewrites version and both digests, no-op run is clean")
+
+
+def test_missing_digest(parent: Path) -> None:
+    tree = make_tree(parent, release("v1.2.0", {**HEX, "aarch64": None}))
+    result = run(tree)
+    expect(result.returncode != 0, "missing digest did not fail")
+    expect("no digest for demo-native-1.2.0-linux-aarch64.tar.gz" in result.stdout, result.stdout)
+    expect((tree / "packages" / "demo" / "package.nix").read_text() == PACKAGE, "partial rewrite")
+    print("ok: missing asset digest fails without touching the package")
+
+
+def test_print_config(parent: Path) -> None:
+    tree = make_tree(parent, release("v1.1.0", HEX))
+    result = run(tree, "--print-config")
+    expect(result.returncode == 0, f"print-config failed: {result.stdout}{result.stderr}")
+    expect(
+        json.loads(result.stdout) == {"managed": ["demo"], "nix_update": {"demo": ["--version=unstable"]}},
+        result.stdout,
+    )
+    print("ok: --print-config reflects [meta]")
+
+
+def test_helpers(parent: Path) -> None:
+    module = load_script()
+
+    annotated = module.release_doc({"tag_name": "v1.2.3", "assets": []})
+    expect(annotated["tag"] == "v1.2.3", "tag not preserved")
+    expect(annotated["version"] == "1.2.3", "v not stripped from version")
+    try:
+        module.release_doc({"tag_name": "nightly"})
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("unusable release tag was accepted")
+
+    hasher = module.Hasher()
+    namespace = {"release": {"version": "1.2.3", "tag": "v1.2.3"}}
+    expect(module.render("{release.version}", namespace, hasher) == "1.2.3", "dotted template")
+    namespace["pinned"] = {"version": "nested"}
+    namespace["pinned.version"] = "flat"
+    expect(module.resolve(namespace, "pinned.version") == "flat", "flat key not preferred")
+    expect(
+        module.render("^([0-9a-f]{64})  $", {}, hasher, lenient=True) == "^([0-9a-f]{64})  $",
+        "lenient render rewrote a quantifier",
+    )
+    print("ok: release annotation, dotted templates, exact-key precedence, literal braces")
+
+
+def test_schema(parent: Path) -> None:
+    tree = make_tree(parent, release("v1.1.0", HEX), rules=BROKEN)
+    result = run(tree)
+    expect(result.returncode != 0, "misspelled field was accepted")
+    expect("unknown field(s) for derive: jsonpth" in result.stdout, result.stdout)
+    expect((tree / "packages" / "demo" / "package.nix").read_text() == PACKAGE, "partial rewrite")
+    print("ok: unknown spec fields fail before any pin is rewritten")
+
+
+def main() -> int:
+    cases = [test_refresh, test_missing_digest, test_print_config, test_helpers, test_schema]
+    try:
+        with tempfile.TemporaryDirectory(prefix="update-pins-test-") as tmp:
+            for case in cases:
+                case(Path(tmp))
+    except AssertionError as err:
+        print(f"FAIL: {err}")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

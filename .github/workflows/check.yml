@@ -26,6 +26,9 @@ jobs:
       - name: Check formatting
         run: nix fmt -- --fail-on-change
 
+      - name: Test update-pins
+        run: python3 tools/tests/test-update-pins
+
       - name: Lint shell sources
         run: nix run .#shellcheck -- tools/gen-ms-sources/gen.sh
 
@@ -34,6 +37,9 @@ jobs:
 
       - name: Deadnix (unused declarations)
         run: nix run .#deadnix -- -L --fail -- .
+
+      - name: Evaluate all systems
+        run: nix flake check --all-systems --no-build --no-update-lock-file --no-write-lock-file
 
       - name: Check flake and build packages
         run: nix flake check --print-build-logs --no-update-lock-file --no-write-lock-file

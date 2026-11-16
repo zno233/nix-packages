@@ -1,45 +1,31 @@
-# Update recipes for pins that nix-update cannot drive: content pinned
+# Update recipes for packages nix-update cannot drive: content pinned
 # without a releasable version (rolling HEADs), or version/hash data spread
-# over several release assets. Executed by tools/update-pins.
+# over several release assets. Executed by tools/update-pins; that script's
+# docstring documents the spec kinds, fields, transforms and template rules.
 #
-# A rule lists specs in declaration order. Every spec is a fetch
-# (url: plain/JSON text; prefetch: nix flake prefetch), a find
-# (doc + tag regex and/or asset name(s): first item of a listed doc
-# matching them, e.g. the newest release of a channel that still ships
-# the assets), a derivation (doc + json_path or regex, narrowed by
-# validate / transform; the regex is a token template — unresolvable
-# braces such as {64} quantifiers stay literal) or a pin
-# (pattern + value): pins capture their current value into the namespace
-# first and are rewritten once all values are known. Patterns are matched
-# per line; the captured group is replaced by template. For multi-file
+# A rule is evaluated in declaration order: sources first, then derived
+# values, then pins. Pins capture their current value into the namespace
+# first and are rewritten only once every value is known; for multi-file
 # rules (packages glob) each file is processed separately and all changed
 # files are committed together with the rule's commit message.
 #
-# Supported transforms live in tools/update-pins TRANSFORMS: sri (hex
-# sha256 -> SRI), dmghash (download URL -> SRI, cached per URL), short
-# (first 7 chars) and iso (timestamp -> YYYY-MM-DD UTC).
-#
-# The [meta] table is not a rule: it tells the update workflow how to
-# drive the packages outside of these recipes, and is consumed by
+# The [meta] table is not a rule: it tells the update workflow how to drive
+# the packages outside of these recipes, and is consumed by
 # `tools/update-pins --print-config` (JSON on stdout).
 
 [meta]
 # App directories not driven by nix-update because their updates run
 # through a rule here (honk's single pin feeds the honk-stock variant too,
 # fcitx5-theme-collect follows a rolling HEAD, axolotl-launcher releases
-# through the Update Server, and mark-shot publishes one tarball per
-# architecture — under nix-update a single run would refresh only the
+# through the Update Server, and mark-shot and windinput publish one asset
+# per architecture — under nix-update a single run would refresh only the
 # running platform's hash).
-managed = ["honk", "honk-stock", "fcitx5-theme-collect", "axolotl-launcher", "mark-shot"]
+managed = ["honk", "honk-stock", "fcitx5-theme-collect", "axolotl-launcher", "mark-shot", "windinput"]
 
 # Extra nix-update flags per app directory.
 [meta.nix-update]
 # nix-update ignores pre-releases by default; doona only publishes those.
 doona = "--version=unstable"
-
-[honk]
-package = "packages/apps/honk/packages/honk.nix"
-commit = "honk: {old.pin-version} -> {honk-tag}"
 
 # honk follows its own repo (daeuniverse/honk; Zakkaus/doona releases no
 # longer carry the honk builds). Only SemVer tags are tracked — rolling
@@ -47,45 +33,37 @@ commit = "honk: {old.pin-version} -> {honk-tag}"
 # only the -full and -stock-full assets exist; both carry both APIs and
 # the embedded doona UI (musl builds are static and split per API — not
 # packaged).
-[honk.honk-releases]
-url = "https://api.github.com/repos/daeuniverse/honk/releases?per_page=100"
-json = true
+[honk]
+package = "packages/apps/honk/packages/honk.nix"
+commit = "honk: {old.pin-version} -> {release.tag}"
 
-[honk.honk-release]
-find = "honk-releases"
+[honk.release]
+github = "daeuniverse/honk"
 tag = "^v[0-9][0-9A-Za-z.-]*$"
 
-[honk.honk-tag]
-doc = "honk-release"
-json_path = "tag_name"
-validate = "^v[0-9][0-9A-Za-z.-]*$"
-
-[honk.sums]
-url = "https://github.com/daeuniverse/honk/releases/download/{honk-tag}/SHA256SUMS"
-
 [honk.hash-x86_64]
-doc = "sums"
-regex = "^ ?([0-9a-f]+)  honk-core-{honk-tag}-x86_64-unknown-linux-gnu-full\\.tar\\.gz$"
+doc = "release"
+digest_of = "honk-core-{release.tag}-x86_64-unknown-linux-gnu-full.tar.gz"
 transform = "sri"
 
 [honk.hash-aarch64]
-doc = "sums"
-regex = "^ ?([0-9a-f]+)  honk-core-{honk-tag}-aarch64-unknown-linux-gnu-full\\.tar\\.gz$"
+doc = "release"
+digest_of = "honk-core-{release.tag}-aarch64-unknown-linux-gnu-full.tar.gz"
 transform = "sri"
 
 [honk.hash-stock-x86_64]
-doc = "sums"
-regex = "^ ?([0-9a-f]+)  honk-core-{honk-tag}-x86_64-unknown-linux-gnu-stock-full\\.tar\\.gz$"
+doc = "release"
+digest_of = "honk-core-{release.tag}-x86_64-unknown-linux-gnu-stock-full.tar.gz"
 transform = "sri"
 
 [honk.hash-stock-aarch64]
-doc = "sums"
-regex = "^ ?([0-9a-f]+)  honk-core-{honk-tag}-aarch64-unknown-linux-gnu-stock-full\\.tar\\.gz$"
+doc = "release"
+digest_of = "honk-core-{release.tag}-aarch64-unknown-linux-gnu-stock-full.tar.gz"
 transform = "sri"
 
 [honk.pin-version]
 pattern = '  version = "(.*)";'
-value = "{honk-tag}"
+value = "{release.tag}"
 
 [honk.pin-hash-x86]
 pattern = '  hashes\.x86_64-linux\.full = "(.*)";'
@@ -103,6 +81,8 @@ value = "{hash-stock-x86_64}"
 pattern = '  hashes\.aarch64-linux\.stock = "(.*)";'
 value = "{hash-stock-aarch64}"
 
+# fcitx5-theme-collect follows a rolling branch; the commit date becomes
+# the version suffix and the flake prefetch supplies the hash.
 [fcitx5-theme-collect]
 package = "packages/apps/fcitx5-theme-collect/package.nix"
 commit = "fcitx5-theme-collect: {old.pin-rev} -> {head-sha}"
@@ -138,6 +118,8 @@ value = "0-unstable-{head-date}"
 pattern = '    hash = "(.*)";'
 value = "{head-hash}"
 
+# Apple serves the dmg URLs from a rolling catalog, so the URL is captured
+# from the package itself and the hash is recomputed from that download.
 [apple]
 packages = "packages/fonts/apple/*/package.nix"
 commit = "apple-fonts: refresh dmg hashes ({changed})"
@@ -196,51 +178,65 @@ value = "{sum-amd64}"
 pattern = '  hashes\.aarch64-linux = "(.*)";'
 value = "{sum-arm64}"
 
-# mark-shot ships one native tarball per architecture and lists every
-# asset's sha256 in the release body, so replaying the release picks up
-# both hashes without downloading the 60 MB of tarballs.
+# mark-shot ships one native tarball per architecture; GitHub records the
+# sha256 of every release asset, so both hashes come from the API without
+# downloading the 60 MB of tarballs.
 [mark-shot]
 package = "packages/apps/mark-shot/package.nix"
-commit = "mark-shot: {old.pin-version} -> {version}"
+commit = "mark-shot: {old.pin-version} -> {release.version}"
 
 [mark-shot.release]
-url = "https://api.github.com/repos/jswysnemc/mark-shot/releases/latest"
-json = true
-
-[mark-shot.tag]
-doc = "release"
-json_path = "tag_name"
-validate = "^v[0-9][0-9A-Za-z.-]*$"
-
-[mark-shot.version]
-doc = "tag"
-regex = '^v([0-9][0-9A-Za-z.+-]*)$'
-validate = "^[0-9][0-9A-Za-z.+-]*$"
-
-[mark-shot.body]
-doc = "release"
-json_path = "body"
+github = "jswysnemc/mark-shot"
 
 [mark-shot.hash-x86]
-doc = "body"
-regex = '\| \[mark-shot-native-[0-9][^\]]*-linux-x86_64\.tar\.gz\]\([^)]*\) \| [0-9]+ \| `([0-9a-f]{64})` \|'
-validate = "^[0-9a-f]{64}$"
+doc = "release"
+digest_of = "mark-shot-native-{release.version}-linux-x86_64.tar.gz"
 transform = "sri"
 
 [mark-shot.hash-arm64]
-doc = "body"
-regex = '\| \[mark-shot-native-[0-9][^\]]*-linux-aarch64\.tar\.gz\]\([^)]*\) \| [0-9]+ \| `([0-9a-f]{64})` \|'
-validate = "^[0-9a-f]{64}$"
+doc = "release"
+digest_of = "mark-shot-native-{release.version}-linux-aarch64.tar.gz"
 transform = "sri"
 
 [mark-shot.pin-version]
 pattern = '  version = "(.*)";'
-value = "{version}"
+value = "{release.version}"
 
 [mark-shot.pin-hash-x86]
 pattern = '    x86_64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
 value = "{hash-x86}"
 
 [mark-shot.pin-hash-arm64]
+pattern = '    aarch64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
+value = "{hash-arm64}"
+
+# windinput publishes one deb per architecture, both digested in the
+# release API, so no sidecar download is needed.
+[windinput]
+package = "packages/apps/windinput/package.nix"
+commit = "windinput: {old.pin-version} -> {release.version}"
+
+[windinput.release]
+github = "huanfeng/WindInput"
+
+[windinput.hash-amd64]
+doc = "release"
+digest_of = "WindInput-{release.version}-linux-amd64.deb"
+transform = "sri"
+
+[windinput.hash-arm64]
+doc = "release"
+digest_of = "WindInput-{release.version}-linux-arm64.deb"
+transform = "sri"
+
+[windinput.pin-version]
+pattern = '  version = "(.*)";'
+value = "{release.version}"
+
+[windinput.pin-hash-amd64]
+pattern = '    x86_64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
+value = "{hash-amd64}"
+
+[windinput.pin-hash-arm64]
 pattern = '    aarch64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
 value = "{hash-arm64}"

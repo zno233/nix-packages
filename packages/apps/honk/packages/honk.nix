@@ -4,9 +4,9 @@
 # Both glibc variants are built from the same release tag: version is the
 # SemVer tag and every hash is the sha256 of
 # honk-core-<tag>-<arch>-unknown-linux-gnu-<asset>.tar.gz, taken from the
-# release's SHA256SUMS (flavor "full" = the -full asset, "stock" = the
-# -stock-full asset). Flat one-line entries keep each hash matched by
-# exactly one update-pins recipe (tools/update-pins.toml).
+# digest GitHub records for that release asset (flavor "full" = the -full
+# asset, "stock" = the -stock-full asset). Flat one-line entries keep each
+# hash matched by exactly one update-pins recipe (tools/update-pins.toml).
 {
   version = "v0.1.0-beta.6";
   hashes.x86_64-linux.full = "sha256-fVIIDhizrRctmkGk6jioT/CfOkjNfa/50IcsbYe6TKc=";

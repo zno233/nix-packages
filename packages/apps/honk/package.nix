@@ -3,7 +3,8 @@
 #
 # honk publishes its own releases (SemVer tags; rolling "debug"-tagged
 # releases carry CI artefacts and are skipped by the update rule). Every
-# release attaches per-arch archives and their SHA256SUMS:
+# release attaches per-arch archives, and GitHub records each asset's
+# sha256 digest (which tools/update-pins reads):
 #   -unknown-linux-gnu       glibc build; packed by this derivation
 #                            (autoPatchelfHook, see make-honk.nix)
 #   -unknown-linux-musl      static build, needs no patching at all (not

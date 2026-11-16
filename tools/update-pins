@@ -1,28 +1,31 @@
 #!/usr/bin/env python3
 """Declarative pin refreshes for packages nix-update cannot drive.
 
-.pattern.hit takes the rules from tools/update-pins.toml alongside the
-script. A rule lists specs in declaration order; every spec is one of:
+`tools/update-pins.toml` describes, per package, where version and hash data
+live and which lines of the package file hold them.  A rule is evaluated in
+declaration order: every spec contributes one value to the rule's namespace,
+and pins are rewritten only after all of them resolved.
 
-  fetch    url = <template> (+ json, json_path)  — plain or JSON document
-           prefetch = <template> (+ json_path)   — `nix flake prefetch`
-  find     doc = <key> + tag = <regex> and/or asset = <name|array>
-           — first item of a list doc matching them (tag fullmatches,
-           assets carry every given name), e.g. the newest release of a
-           companion channel that still ships the assets
-  derive   doc = <key> + json_path | regex       — extract from a fetched doc
-  pin      pattern = <regex> + value = <template> — capture & rewrite
+Specs:
+  fetch   url = <template> (+ json, json_path)   — document, or scalar value
+          prefetch = <template> (+ json_path)    — `nix flake prefetch --json`
+          github = <owner/repo> (+ tag)          — a GitHub release; exposes
+                                                   {key.tag} and {key.version};
+                                                   `tag` selects from the
+                                                   release list instead of
+                                                   taking the latest release
+  derive  doc = <key> + json_path | regex | digest_of
+          — a value from a fetched document; digest_of reads the sha256 that
+            GitHub records for a named release asset
+  pin     pattern = <regex> + value = <template>
+          — capture the current value, then rewrite it
 
-All values live in one namespace joined rule→file; pinned captures make
-themselves available to later specs. Optional per-spec modifiers:
-
-  validate   = <regex>     fullmatch before applying (pre-transform)
-  transform  = sri | dmghash | short | iso   (add to TRANSFORMS to extend)
-
-After all values are known each pin is rewritten only if its value changed;
-the changed files of a rule are committed once with its formatted message.
-Any failure exits non-zero; the update workflow treats that as a failed
-sub-updater.
+`validate` (fullmatch) and `transform` (sri | dmghash | short | iso) apply to
+fetched and derived scalars; `validate` on a pin checks the captured value.
+Templates resolve flat keys first and then dotted paths into fetched
+documents; in regex templates an unresolvable token stays literal, so
+quantifiers such as {64} survive.  Pins capture their old value under
+`old.<key>` before anything is written.
 
 Usage: tools/update-pins [--print-config] [rule ...]   (default: every rule)
 """
@@ -39,37 +42,34 @@ import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
 
-TOKEN = re.compile(r"\{([\w-]+(?:\.[\w-]+)*)(?::(\w+))?\}")
+ROOT = Path(__file__).resolve().parent.parent
+RULES_FILE = ROOT / "tools" / "update-pins.toml"
+
+TOKEN = re.compile(r"\{([\w.-]+)(?::(\w+))?\}")
+RELEASE_VERSION = re.compile(r"[0-9][0-9A-Za-z.+-]*")
+
 META = ("package", "packages", "commit")
 
+# `validate` / `transform` are accepted wherever a value is produced.
+SCALAR = {"validate", "transform"}
+FIELDS = {
+    "fetch": {"url", "prefetch", "github", "json", "json_path", "tag"} | SCALAR,
+    "derive": {"doc", "json_path", "regex", "digest_of"} | SCALAR,
+    "pin": {"pattern", "value", "validate"},
+}
 
-def log(msg: str) -> None:
-    print(msg, flush=True)
+
+def log(message: str) -> None:
+    print(message, flush=True)
 
 
-def fail(msg: str) -> None:
-    raise RuntimeError(msg)
-
-
-def github_auth(url: str) -> list[str]:
-    """curl args authenticating api.github.com when a token is available.
-
-    The unauthenticated API allows 60 requests per hour per IP, and CI
-    runners share theirs, so the release/commit lookups start answering
-    403 well before an update run is done. GH_TOKEN is the name the
-    workflow exports; GITHUB_TOKEN covers manual runs.
-    """
-    if not url.startswith("https://api.github.com/"):
-        return []
-    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
-    return ["-H", f"Authorization: Bearer {token}"] if token else []
+def fail(message: str) -> None:
+    raise RuntimeError(message)
 
 
 def fetch(url: str, retries: int = 5) -> bytes:
-    # curl, not urllib: python's TLS stack gets dropped by some bot-aware
-    # CDNs (connection resets/garbled handshakes) while curl plays fine;
-    # Hasher.sri_of likewise defaults to curl.
-    last: str | None = None
+    """curl, not urllib: some bot-aware CDNs reset Python's TLS handshakes."""
+    last = None
     for _ in range(retries):
         res = subprocess.run(
             [
@@ -88,8 +88,6 @@ def fetch(url: str, retries: int = 5) -> bytes:
             return res.stdout
         last = res.stderr.decode(errors="replace")[-300:]
         if b"error: 403" in res.stderr:
-            # a 4xx will not get better by retrying; on the GitHub API it
-            # means the rate limit/auth failed
             if url.startswith("https://api.github.com/"):
                 fail(
                     f"could not fetch {url}: {last.strip()}"
@@ -99,10 +97,24 @@ def fetch(url: str, retries: int = 5) -> bytes:
     fail(f"could not fetch {url}: {last}")
 
 
+def github_auth(url: str) -> list[str]:
+    """curl args authenticating api.github.com when a token is available.
+
+    The unauthenticated API allows 60 requests per hour per IP, and CI
+    runners share theirs, so GH_TOKEN/GITHUB_TOKEN is forwarded when set.
+    """
+    if not url.startswith("https://api.github.com/"):
+        return []
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    return ["-H", f"Authorization: Bearer {token}"] if token else []
+
+
 def sri(hex_digest: str) -> str:
     return subprocess.run(
         ["nix", "hash", "to-sri", "--type", "sha256", hex_digest],
-        check=True, capture_output=True, text=True,
+        check=True,
+        capture_output=True,
+        text=True,
     ).stdout.strip()
 
 
@@ -118,10 +130,13 @@ class Hasher:
         with tempfile.NamedTemporaryFile() as tmp:
             ok = False
             for _ in range(5):
-                if subprocess.run(
-                    ["curl", "-fsSL", "--connect-timeout", "30", "-o", tmp.name, url],
-                    capture_output=True,
-                ).returncode == 0:
+                if (
+                    subprocess.run(
+                        ["curl", "-fsSL", "--connect-timeout", "30", "-o", tmp.name, url],
+                        capture_output=True,
+                    ).returncode
+                    == 0
+                ):
                     ok = True
                     break
             if not ok:
@@ -148,16 +163,39 @@ TRANSFORMS = {
 }
 
 
-def render(template: str, ns: dict, hasher: Hasher, lenient: bool = False) -> str:
+def json_path(node, path: str):
+    for part in path.split("."):
+        node = node[int(part)] if re.fullmatch(r"\d+", part) else node[part]
+    return node
+
+
+def resolve(namespace: dict, name: str):
+    """Flat keys first, then dotted paths into documents."""
+    if name in namespace:
+        return namespace[name]
+    parts = name.split(".")
+    for cut in range(len(parts) - 1, 0, -1):
+        key = ".".join(parts[:cut])
+        if key not in namespace:
+            continue
+        node = namespace[key]
+        for part in parts[cut:]:
+            node = node[int(part)] if part.isdigit() else node[part]
+        return node
+    raise KeyError(name)
+
+
+def render(template: str, namespace: dict, hasher: Hasher, lenient: bool = False) -> str:
     def token(match: re.Match) -> str:
         key, kind = match.group(1), match.group(2)
-        if key not in ns:
+        try:
+            value = resolve(namespace, key)
+        except (KeyError, TypeError):
             if lenient:
-                # regex templates: braces that are no reachable value
-                # (e.g. {64} quantifiers) stay literal
+                # regex templates: braces that are not a reachable value (e.g.
+                # {64} quantifiers) stay literal
                 return match.group(0)
-            fail(f"unknown value in template: {match.group(0)}")
-        value = ns[key]
+            fail(f"unknown template value: {match.group(0)}")
         if kind:
             if kind not in TRANSFORMS:
                 fail(f"unknown transform: {kind}")
@@ -165,12 +203,6 @@ def render(template: str, ns: dict, hasher: Hasher, lenient: bool = False) -> st
         return str(value)
 
     return TOKEN.sub(token, template)
-
-
-def json_path(node, path: str):
-    for part in path.split("."):
-        node = node[int(part)] if re.fullmatch(r"\d+", part) else node[part]
-    return node
 
 
 def check(spec: dict, key: str, value: str, hasher: Hasher) -> str:
@@ -186,128 +218,182 @@ def check(spec: dict, key: str, value: str, hasher: Hasher) -> str:
     return value
 
 
+def release_doc(release: dict) -> dict:
+    """Annotate a GitHub release with the tag and the version without its v."""
+    tag = str(release.get("tag_name", ""))
+    version = tag[1:] if tag.startswith("v") else tag
+    if not RELEASE_VERSION.fullmatch(version):
+        fail(f"unusable release tag: {tag!r}")
+    return {**release, "tag": tag, "version": version}
+
+
+def spec_kind(name: str, spec: dict) -> str:
+    if "pattern" in spec:
+        kind = "pin"
+    elif "doc" in spec:
+        kind = "derive"
+    elif {"url", "prefetch", "github"} & set(spec):
+        kind = "fetch"
+    else:
+        fail(f"{name}: unusable spec")
+
+    unknown = set(spec) - FIELDS[kind]
+    if unknown:
+        fail(f"{name}: unknown field(s) for {kind}: {', '.join(sorted(unknown))}")
+
+    if kind == "fetch":
+        sources = {"url", "prefetch", "github"} & set(spec)
+        if len(sources) != 1:
+            fail(f"{name}: fetch needs exactly one of url, prefetch, github")
+        if "json" in spec and "url" not in spec:
+            fail(f"{name}: json only applies to url fetches")
+        if "tag" in spec and "github" not in spec:
+            fail(f"{name}: tag only applies to github fetches")
+    elif kind == "derive":
+        extractors = {"json_path", "regex", "digest_of"} & set(spec)
+        if len(extractors) != 1:
+            fail(f"{name}: derive needs exactly one of json_path, regex, digest_of")
+    elif kind == "pin":
+        if not {"pattern", "value"} <= set(spec):
+            fail(f"{name}: pin needs pattern and value")
+    return kind
+
+
 class Rule:
-    def __init__(self, name: str, rule: dict, hasher: Hasher) -> None:
+    def __init__(self, name: str, table: dict, hasher: Hasher) -> None:
         self.name = name
-        self.rule = rule
+        self.table = table
         self.hasher = hasher
 
     def files(self) -> list[str]:
-        if "package" in self.rule:
-            return [str(root / self.rule["package"])]
-        return sorted(glob.glob(str(root / self.rule["packages"])))
+        if "package" in self.table:
+            return [str(ROOT / self.table["package"])]
+        return sorted(glob.glob(str(ROOT / self.table["packages"])))
 
-    def process(self, pkg: str, ns: dict, old: dict) -> bool:
-        path = Path(pkg)
+    def fetch_spec(self, key: str, spec: dict, namespace: dict):
+        if "github" in spec:
+            repo = spec["github"]
+            if "tag" in spec:
+                releases = json.loads(
+                    fetch(f"https://api.github.com/repos/{repo}/releases?per_page=100")
+                )
+                release = next(
+                    (
+                        item
+                        for item in releases
+                        if re.fullmatch(spec["tag"], str(item.get("tag_name", "")))
+                    ),
+                    None,
+                )
+                if release is None:
+                    fail(f"{self.name}: no release matches tag {spec['tag']}")
+            else:
+                release = json.loads(
+                    fetch(f"https://api.github.com/repos/{repo}/releases/latest")
+                )
+            value = release_doc(release)
+        elif "prefetch" in spec:
+            ref = render(spec["prefetch"], namespace, self.hasher)
+            out = subprocess.run(
+                ["nix", "flake", "prefetch", "--json", ref],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout
+            value = json.loads(out)
+        else:
+            data = fetch(render(spec["url"], namespace, self.hasher))
+            value = json.loads(data) if spec.get("json") else data.decode()
+
+        if "json_path" not in spec:
+            return value
+        return check(spec, key, str(json_path(value, spec["json_path"])), self.hasher)
+
+    def derive_spec(self, key: str, spec: dict, namespace: dict):
+        source = namespace[spec["doc"]]
+        if "json_path" in spec:
+            value = json_path(source, spec["json_path"])
+        elif "regex" in spec:
+            match = re.search(
+                render(spec["regex"], namespace, self.hasher, lenient=True),
+                source,
+                re.MULTILINE,
+            )
+            if not match:
+                fail(f"{self.name}: regex failed for {key}")
+            value = match.group(1)
+        else:
+            name = render(spec["digest_of"], namespace, self.hasher)
+            digest = next(
+                (
+                    asset.get("digest")
+                    for asset in source.get("assets", [])
+                    if asset.get("name") == name
+                ),
+                None,
+            )
+            if not digest:
+                fail(f"{self.name}: no digest for {name}")
+            if not str(digest).startswith("sha256:"):
+                fail(f"{self.name}: unsupported digest for {name}: {digest}")
+            value = str(digest)[len("sha256:") :]
+        return check(spec, key, str(value), self.hasher)
+
+    def process(self, path: str, namespace: dict, old: dict) -> bool:
+        path = Path(path)
         text = path.read_text()
-        local_ns = dict(ns)
+        local = dict(namespace)
         pins: dict[str, dict] = {}
 
-        for key, spec in self.rule.items():
+        for key, spec in self.table.items():
             if key in META:
                 continue
-            if "url" in spec or "prefetch" in spec:
-                if "url" in spec:
-                    data = fetch(render(spec["url"], local_ns, self.hasher))
-                    value = json.loads(data) if spec.get("json") else data.decode()
-                else:
-                    ref = render(spec["prefetch"], local_ns, self.hasher)
-                    out = subprocess.run(
-                        ["nix", "flake", "prefetch", "--json", ref],
-                        check=True, capture_output=True, text=True,
-                    ).stdout
-                    value = json.loads(out)
-                if spec.get("json_path"):
-                    # the spec yields a scalar value: extract, validate, transform
-                    value = check(
-                        spec, key,
-                        str(json_path(value, spec["json_path"])),
-                        self.hasher,
-                    )
-                    local_ns[key] = value
-                else:
-                    # the spec yields a document for later derives: keep it raw
-                    local_ns[key] = value
-            elif "find" in spec:
-                source = local_ns[spec["find"]]
-                if not isinstance(source, list):
-                    fail(f"{self.name}: find expects a list doc: {key}")
-                tag = spec.get("tag")
-                asset = spec.get("asset")
-                wanted = [asset] if isinstance(asset, str) else list(asset or [])
-                for item in source:
-                    if tag and not re.fullmatch(tag, str(item.get("tag_name", ""))):
-                        continue
-                    have = {a.get("name") for a in item.get("assets", [])}
-                    if all(w in have for w in wanted):
-                        break
-                else:
-                    crit = []
-                    if tag:
-                        crit.append(f"tag {tag}")
-                    if wanted:
-                        crit.append(f"assets {', '.join(wanted)}")
-                    fail(f"{self.name}: no doc matches {'; '.join(crit) or 'anything'}")
-                local_ns[key] = item
-            elif "pattern" in spec:
-                m = re.search(f"^{spec['pattern']}$", text, re.MULTILINE)
-                if not m:
-                    fail(f"{self.name}: pin pattern not found: {key}")
-                old[key] = m.group(1)
-                local_ns[key] = old[key]
-                pins[key] = spec
-            elif "doc" in spec:
-                source = local_ns[spec["doc"]]
-                if "json_path" in spec:
-                    value = json_path(source, spec["json_path"])
-                else:
-                    m = re.search(
-                        render(spec["regex"], local_ns, self.hasher, lenient=True),
-                        source, re.MULTILINE,
-                    )
-                    if not m:
-                        fail(f"{self.name}: regex failed for {key}")
-                    value = m.group(1)
-                value = check(spec, key, str(value), self.hasher)
-                local_ns[key] = value
+            kind = spec_kind(f"{self.name}.{key}", spec)
+            if kind == "fetch":
+                local[key] = self.fetch_spec(key, spec, local)
+            elif kind == "derive":
+                local[key] = self.derive_spec(key, spec, local)
             else:
-                fail(f"{self.name}: unusable spec: {key}")
+                match = re.search(f"^{spec['pattern']}$", text, re.MULTILINE)
+                if not match:
+                    fail(f"{self.name}: pin pattern not found: {key}")
+                value = match.group(1)
+                validate = spec.get("validate")
+                if validate and not re.fullmatch(validate, value):
+                    fail(f"{self.name}: {key} failed validation: {value}")
+                old[key] = value
+                local[key] = value
+                pins[key] = spec
 
         changed = False
         for key, spec in pins.items():
-            new = render(spec["value"], local_ns, self.hasher)
-            m = re.search(f"^{spec['pattern']}$", text, re.MULTILINE)
-            if new == m.group(1):
+            new = render(spec["value"], local, self.hasher)
+            match = re.search(f"^{spec['pattern']}$", text, re.MULTILINE)
+            if new == match.group(1):
                 continue
-            text = text[:m.start(1)] + new + text[m.end(1):]
+            text = text[: match.start(1)] + new + text[match.end(1) :]
             changed = True
         if changed:
             path.write_text(text)
-            ns.update(local_ns)
+            namespace.update(local)
         return changed
-
-
-root = Path(__file__).resolve().parent.parent
 
 
 def load_rules(path: Path) -> dict:
     raw = tomllib.loads(path.read_text())
     rules = {}
-    for name, rule in raw.items():
+    for name, table in raw.items():
         if name == "meta":
             continue
-        if set(META) & set(rule) == set():
+        if set(META) & set(table) == set():
             fail(f"rule {name} lacks package/packages")
-        rules[name] = rule
+        rules[name] = table
     return rules
 
 
-RULES = load_rules(root / "tools" / "update-pins.toml")
-
-
-def print_config() -> None:
+def print_config(path: Path) -> None:
     """Emit the [meta] table as the update workflow's driving config."""
-    meta = tomllib.loads((root / "tools" / "update-pins.toml").read_text())["meta"]
+    meta = tomllib.loads(path.read_text())["meta"]
     print(
         json.dumps(
             {
@@ -321,45 +407,48 @@ def print_config() -> None:
 
 
 def main() -> None:
-    hasher = Hasher()
     args = sys.argv[1:]
+    rules = load_rules(RULES_FILE)
     if "--print-config" in args:
-        print_config()
+        print_config(RULES_FILE)
         return
-    selected = args or list(RULES)
+
+    hasher = Hasher()
     status = 0
-    for name in selected:
-        if name not in RULES:
+    for name in args or list(rules):
+        if name not in rules:
             log(f"unknown rule: {name}")
             status = 1
             continue
-        rule = RULES[name]
         try:
-            rule_runner = Rule(name, rule, hasher)
-            ns: dict[str, str] = {}
+            rule = Rule(name, rules[name], hasher)
+            namespace: dict = {}
             old: dict[str, str] = {}
-            changed_files = []
-            for pkg in rule_runner.files():
-                if rule_runner.process(pkg, ns, old):
-                    changed_files.append(pkg)
-            if not changed_files:
+            changed = [path for path in rule.files() if rule.process(path, namespace, old)]
+            if not changed:
                 log(f"{name}: up to date")
                 continue
-            subprocess.run(["git", "add", "--", *changed_files], check=True, cwd=root)
-            names = sorted({Path(pkg).parent.name for pkg in changed_files})
+            subprocess.run(["git", "add", "--", *changed], check=True, cwd=ROOT)
             commit_ns = {
-                **ns,
-                **{f"old.{k}": v for k, v in old.items()},
-                "changed": " ".join(names),
+                **namespace,
+                **{f"old.{key}": value for key, value in old.items()},
+                "changed": " ".join(sorted({Path(p).parent.name for p in changed})),
             }
-            commit = render(rule["commit"], commit_ns, hasher)
-            # pathspec commit: only this rule's files, never unrelated index state
             subprocess.run(
-                ["git", "commit", "--quiet", "-m", commit, "--", *changed_files],
-                check=True, cwd=root,
+                [
+                    "git",
+                    "commit",
+                    "--quiet",
+                    "-m",
+                    render(rules[name]["commit"], commit_ns, hasher),
+                    "--",
+                    *changed,
+                ],
+                check=True,
+                cwd=ROOT,
             )
-            log(f"{name}: refreshed pins ({', '.join(names)})")
-        except Exception as err:  # noqa: BLE001
+            log(f"{name}: refreshed pins ({', '.join(changed)})")
+        except Exception as err:  # noqa: BLE001 - one rule must not stop the rest
             log(f"{name}: FAILED: {err}")
             status = 1
     sys.exit(status)
