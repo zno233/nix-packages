@@ -72,6 +72,7 @@ stdenv.mkDerivation {
   runtimeDependencies = [
     wayland
     pulseaudio
+    stdenv.cc.cc.lib
   ];
 
   dontConfigure = true;
@@ -89,8 +90,12 @@ stdenv.mkDerivation {
     # Upstream's FFmpeg source archive is not needed at runtime.
     rm "$out/lib/mark-shot/media/MEDIA-SOURCES.tar.xz"
 
+    # The ONNX Runtime that mark-shot installs on first OCR use is dlopen'd
+    # from the user's data directory, so it cannot pick up a store rpath and
+    # needs libstdc++ on the loader path.
     makeWrapper "$out/lib/mark-shot/mark-shot" "$out/bin/mark-shot" \
-      --set MARK_SHOT_MEDIA_LIBRARY "$out/lib/mark-shot/media/libmarkshot-media.so"
+      --set MARK_SHOT_MEDIA_LIBRARY "$out/lib/mark-shot/media/libmarkshot-media.so" \
+      --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ stdenv.cc.cc.lib ]}"
 
     substituteInPlace "$out/share/applications/io.github.jswysnemc.MarkShot.desktop" \
       --replace-fail "Exec=mark-shot" "Exec=$out/bin/mark-shot"
