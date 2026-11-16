@@ -56,7 +56,7 @@ personal machines.
 
 ## Font updates
 
-13 of the 16 vendor trees mirror
+22 of the 25 vendor trees mirror
 [brsvh/chinese-fonts-overlay](https://github.com/brsvh/chinese-fonts-overlay),
 refreshed daily by `sync-fonts.yml`; `apple/`, `microsoft/`, and `zno/` are
 maintained here. The microsoft tree is built from
