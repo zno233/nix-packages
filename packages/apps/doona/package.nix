@@ -35,7 +35,6 @@ stdenv.mkDerivation (finalAttrs: {
     description = "Web UI for the daeuniverse engines honk/dae native API";
     homepage = "https://github.com/Zakkaus/doona";
     license = lib.licenses.gpl3Only;
-    mainProgram = "doona";
     platforms = lib.platforms.all;
   };
 })
