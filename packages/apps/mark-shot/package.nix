@@ -29,7 +29,7 @@
 }:
 
 let
-  version = "0.2.0";
+  version = "0.2.1";
 
   tarArch = {
     x86_64-linux = "x86_64";
@@ -39,8 +39,8 @@ let
   archive = "mark-shot-native-${version}-linux-${tarArch.${stdenv.hostPlatform.system}}.tar.gz";
 
   hashes = {
-    x86_64-linux = "sha256-CkGWmF78sCLWAmnd3xsG64gwdLT9Kx8xyHCouL1iu/U=";
-    aarch64-linux = "sha256-hOyEsG7OvoDcTzJAW2UR8C+ysJFNoO3vEAEYZvsP6A4=";
+    x86_64-linux = "sha256-ZGA7pzgHjSZcWWq1Y7RkbIv1Jw9sHymM9rk4NHTb1kQ=";
+    aarch64-linux = "sha256-zaUjbo4Zn4IOfny9diWBgvKQKgKamLBe0S/SrNDMauE=";
   };
 in
 stdenv.mkDerivation {
