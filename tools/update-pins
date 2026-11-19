@@ -27,6 +27,11 @@ documents; in regex templates an unresolvable token stays literal, so
 quantifiers such as {64} survive.  Pins capture their old value under
 `old.<key>` before anything is written.
 
+A rule may also set `diff` and `changelog` templates.  They are rendered like
+`commit` (with the same namespace, including `old.*`) and appended to the
+commit message as the conventional `Diff:` / `Changelog:` trailers, so
+recipes produce the same shape nix-update writes for its packages.
+
 Usage: tools/update-pins [--print-config] [rule ...]   (default: every rule)
 """
 
@@ -48,7 +53,7 @@ RULES_FILE = ROOT / "tools" / "update-pins.toml"
 TOKEN = re.compile(r"\{([\w.-]+)(?::(\w+))?\}")
 RELEASE_VERSION = re.compile(r"[0-9][0-9A-Za-z.+-]*")
 
-META = ("package", "packages", "commit")
+META = ("package", "packages", "commit", "diff", "changelog")
 
 # `validate` / `transform` are accepted wherever a value is produced.
 SCALAR = {"validate", "transform"}
@@ -434,13 +439,18 @@ def main() -> None:
                 **{f"old.{key}": value for key, value in old.items()},
                 "changed": " ".join(sorted({Path(p).parent.name for p in changed})),
             }
+            message = render(rules[name]["commit"], commit_ns, hasher)
+            for field, label in (("diff", "Diff"), ("changelog", "Changelog")):
+                template = rules[name].get(field)
+                if template:
+                    message += f"\n\n{label}: {render(template, commit_ns, hasher)}"
             subprocess.run(
                 [
                     "git",
                     "commit",
                     "--quiet",
                     "-m",
-                    render(rules[name]["commit"], commit_ns, hasher),
+                    message,
                     "--",
                     *changed,
                 ],

@@ -36,6 +36,8 @@ doona = "--version=unstable"
 [honk]
 package = "packages/apps/honk/packages/honk.nix"
 commit = "honk: {old.pin-version} -> {release.tag}"
+diff = "https://github.com/daeuniverse/honk/compare/{old.pin-version}...{release.tag}"
+changelog = "https://github.com/daeuniverse/honk/releases/tag/{release.tag}"
 
 [honk.release]
 github = "daeuniverse/honk"
@@ -86,6 +88,7 @@ value = "{hash-stock-aarch64}"
 [fcitx5-theme-collect]
 package = "packages/apps/fcitx5-theme-collect/package.nix"
 commit = "fcitx5-theme-collect: {old.pin-rev} -> {head-sha}"
+diff = "https://github.com/zno233/fcitx5-theme-collect/compare/{old.pin-rev}...{head-sha}"
 
 [fcitx5-theme-collect.head-commit]
 url = "https://api.github.com/repos/zno233/fcitx5-theme-collect/commits/HEAD"
@@ -145,6 +148,8 @@ value = "{pin-url:dmghash}"
 [axolotl-launcher]
 package = "packages/apps/axolotl-launcher/package.nix"
 commit = "axolotl-launcher: {old.pin-version} -> {axolotl-version}"
+diff = "https://github.com/Axolotl-Launcher/Axolotl/compare/v{old.pin-version}...v{axolotl-version}"
+changelog = "https://github.com/Axolotl-Launcher/Axolotl/releases/tag/v{axolotl-version}"
 
 [axolotl-launcher.catalog]
 url = "https://update.axlmc.org/api/downloads/latest?channel=release"
@@ -184,6 +189,8 @@ value = "{sum-arm64}"
 [mark-shot]
 package = "packages/apps/mark-shot/package.nix"
 commit = "mark-shot: {old.pin-version} -> {release.version}"
+diff = "https://github.com/jswysnemc/mark-shot/compare/v{old.pin-version}...{release.tag}"
+changelog = "https://github.com/jswysnemc/mark-shot/releases/tag/{release.tag}"
 
 [mark-shot.release]
 github = "jswysnemc/mark-shot"
@@ -215,6 +222,8 @@ value = "{hash-arm64}"
 [windinput]
 package = "packages/apps/windinput/package.nix"
 commit = "windinput: {old.pin-version} -> {release.version}"
+diff = "https://github.com/huanfeng/WindInput/compare/v{old.pin-version}...{release.tag}"
+changelog = "https://github.com/huanfeng/WindInput/releases/tag/{release.tag}"
 
 [windinput.release]
 github = "huanfeng/WindInput"
@@ -246,6 +255,8 @@ value = "{hash-arm64}"
 [venera-next]
 package = "packages/apps/venera-next/package.nix"
 commit = "venera-next: {old.pin-version} -> {release.version}"
+diff = "https://github.com/CyrilPeng/Venera-Next/compare/v{old.pin-version}...{release.tag}"
+changelog = "https://github.com/CyrilPeng/Venera-Next/releases/tag/{release.tag}"
 
 [venera-next.release]
 github = "CyrilPeng/Venera-Next"

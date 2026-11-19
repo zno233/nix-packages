@@ -54,6 +54,8 @@ demo = "--version=unstable"
 [demo]
 package = "packages/demo/package.nix"
 commit = "demo: {old.pin-version} -> {version}"
+diff = "https://github.com/example/demo/compare/v{old.pin-version}...{tag}"
+changelog = "https://github.com/example/demo/releases/tag/{tag}"
 
 [demo.release]
 url = "@RELEASE@"
@@ -181,6 +183,15 @@ def test_refresh(parent: Path) -> None:
     expect('    aarch64-linux = "aarch64";' in text, "arch map was rewritten")
 
     expect(git(tree, "log", "-1", "--pretty=%s").strip() == "demo: 1.0.0 -> 1.1.0", "commit message")
+    body = git(tree, "log", "-1", "--pretty=%b")
+    expect(
+        "Diff: https://github.com/example/demo/compare/v1.0.0...v1.1.0" in body,
+        f"diff trailer missing: {body}",
+    )
+    expect(
+        "Changelog: https://github.com/example/demo/releases/tag/v1.1.0" in body,
+        f"changelog trailer missing: {body}",
+    )
     changed = git(tree, "show", "--pretty=format:", "--name-only", "HEAD").strip()
     expect(changed == "packages/demo/package.nix", f"unexpected files committed: {changed}")
 
