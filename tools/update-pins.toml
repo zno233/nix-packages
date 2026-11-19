@@ -17,10 +17,10 @@
 # App directories not driven by nix-update because their updates run
 # through a rule here (honk's single pin feeds the honk-stock variant too,
 # fcitx5-theme-collect follows a rolling HEAD, axolotl-launcher releases
-# through the Update Server, and mark-shot and windinput publish one asset
-# per architecture — under nix-update a single run would refresh only the
-# running platform's hash).
-managed = ["honk", "honk-stock", "fcitx5-theme-collect", "axolotl-launcher", "mark-shot", "windinput"]
+# through the Update Server, and mark-shot, windinput and venera-next publish
+# one asset per architecture — under nix-update a single run would refresh
+# only the running platform's hash).
+managed = ["honk", "honk-stock", "fcitx5-theme-collect", "axolotl-launcher", "mark-shot", "windinput", "venera-next"]
 
 # Extra nix-update flags per app directory.
 [meta.nix-update]
@@ -238,5 +238,36 @@ pattern = '    x86_64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
 value = "{hash-amd64}"
 
 [windinput.pin-hash-arm64]
+pattern = '    aarch64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
+value = "{hash-arm64}"
+
+# venera-next publishes one deb per architecture; both digests are in the
+# release API, so no asset download is needed.
+[venera-next]
+package = "packages/apps/venera-next/package.nix"
+commit = "venera-next: {old.pin-version} -> {release.version}"
+
+[venera-next.release]
+github = "CyrilPeng/Venera-Next"
+
+[venera-next.hash-amd64]
+doc = "release"
+digest_of = "venera-next_{release.version}_amd64.deb"
+transform = "sri"
+
+[venera-next.hash-arm64]
+doc = "release"
+digest_of = "venera-next_{release.version}_arm64.deb"
+transform = "sri"
+
+[venera-next.pin-version]
+pattern = '  version = "(.*)";'
+value = "{release.version}"
+
+[venera-next.pin-hash-amd64]
+pattern = '    x86_64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
+value = "{hash-amd64}"
+
+[venera-next.pin-hash-arm64]
 pattern = '    aarch64-linux = "(sha256-[A-Za-z0-9+/=]+)";'
 value = "{hash-arm64}"
