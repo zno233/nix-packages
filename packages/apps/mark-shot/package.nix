@@ -29,7 +29,7 @@
 }:
 
 let
-  version = "0.2.2";
+  version = "0.2.3";
 
   tarArch = {
     x86_64-linux = "x86_64";
@@ -39,8 +39,8 @@ let
   archive = "mark-shot-native-${version}-linux-${tarArch.${stdenv.hostPlatform.system}}.tar.gz";
 
   hashes = {
-    x86_64-linux = "sha256-tiuWX592D+rCTwFzmFcULqsdWzzaVQu108TVUWdLqKo=";
-    aarch64-linux = "sha256-UNhFT/SvbomFyfBE1qD9rJcjLubybXKsgVcrZwtjxNk=";
+    x86_64-linux = "sha256-2TeIw2I4ILqj661iNXsc7oPbFNBFYBeidqrxpZfHo7M=";
+    aarch64-linux = "sha256-BkO0HdEo+85H8e+4mT6PrbRDICeJyuE6VgK9rs5xYP4=";
   };
 in
 stdenv.mkDerivation {
@@ -97,8 +97,10 @@ stdenv.mkDerivation {
       --set MARK_SHOT_MEDIA_LIBRARY "$out/lib/mark-shot/media/libmarkshot-media.so" \
       --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ stdenv.cc.cc.lib ]}"
 
+    # 0.2.3 made the Exec path absolute; pin the substitution to the Exec
+    # key but leave any trailing arguments (currently %f) untouched.
     substituteInPlace "$out/share/applications/io.github.jswysnemc.MarkShot.desktop" \
-      --replace-fail "Exec=mark-shot" "Exec=$out/bin/mark-shot"
+      --replace-fail "Exec=/usr/bin/mark-shot" "Exec=$out/bin/mark-shot"
 
     runHook postInstall
   '';
