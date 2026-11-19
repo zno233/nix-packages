@@ -36,12 +36,12 @@ let
   # sha256 of the official Update Server catalog deb for each platform;
   # flat one-line entries, refreshed by tools/update-pins — do not edit
   # by hand!
-  hashes.x86_64-linux = "sha256-0L6D6pDq6MyTpiqiux2Yc5wQecedCq29iDeSt/QQi3I=";
-  hashes.aarch64-linux = "sha256-7RAuD6XkXeDFx+weFIbD2Kpt51FPL4U+y2/Wib8n5lQ=";
+  hashes.x86_64-linux = "sha256-KmHiP7jrlsMWLVO9TRQrvsy6eRuGxqrnxlCkBiL8TZ4=";
+  hashes.aarch64-linux = "sha256-G/ArjOaVD6j+XLY28KfhQpBkiCEkUSSQ5qAKC31p1cY=";
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "axolotl-launcher";
-  version = "1.11.0";
+  version = "1.11.1";
 
   src = fetchurl {
     urls = [
