@@ -25,7 +25,13 @@ let
 
   meta = {
     description = "Elffont Bopomofo display fonts";
-    homepage = "https://ref.justfont.com/gRbXjtF";
+
+    homepage = [
+      "https://blog.justfont.com/2024/10/elffont/"
+      "https://github.com/justfont/Elffont"
+      "https://justfont.com/justforfun/elf-bpmf"
+    ];
+
     license = licenses.justfont-elffont-license;
 
     longDescription = ''
@@ -63,4 +69,20 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "精靈文";
+
+      languages = [ ];
+
+      licenseCost = "gratisCommercialUse";
+
+      styles = [
+        "art"
+      ];
+
+      vendor = "justfont";
+    };
+  };
 }

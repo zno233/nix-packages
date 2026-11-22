@@ -32,7 +32,15 @@ let
 
   meta = {
     description = "Tsanger Linggang font family";
-    homepage = "https://tsanger.cn";
+
+    homepage = [
+      "https://tsanger.cn/product/51"
+      "https://tsanger.cn/product/52"
+      "https://tsanger.cn/product/53"
+      "https://tsanger.cn/product/54"
+      "https://tsanger.cn/product/55"
+    ];
+
     license = licenses.tsangertype-font-license;
 
     longDescription = ''
@@ -79,4 +87,62 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "仓耳凌刚体";
+
+      languages = [
+        "agr"
+        "bem"
+        "bg"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kum"
+        "kwm"
+        "mhr"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "os"
+        "rn"
+        "ru"
+        "rw"
+        "sel"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-cn"
+        "zh-sg"
+        "zu"
+      ];
+
+      licenseCost = "gratisPersonalUse";
+
+      notices = [
+        {
+          level = "warning";
+
+          text = ''
+            北京仓耳文字技术有限公司版权所有的商业付费字体不建议嵌入式使用，尽管其明确对个人非商业用途进行豁免，但用于个人网站仍然存在风险。
+          '';
+        }
+      ];
+
+      styles = [
+        "art"
+      ];
+
+      vendor = "tsangertype";
+    };
+  };
 }

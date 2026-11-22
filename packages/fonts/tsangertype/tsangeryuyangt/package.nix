@@ -32,7 +32,15 @@ let
 
   meta = {
     description = "Tsanger YuYangT font family";
-    homepage = "https://tsanger.cn";
+
+    homepage = [
+      "https://tsanger.cn/product/196"
+      "https://tsanger.cn/product/197"
+      "https://tsanger.cn/product/198"
+      "https://tsanger.cn/product/199"
+      "https://tsanger.cn/product/200"
+    ];
+
     license = licenses.tsangertype-freefont-license;
 
     longDescription = ''
@@ -79,4 +87,46 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "仓耳渔阳体";
+
+      languages = [
+        "bem"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kwm"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "rn"
+        "rw"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-cn"
+        "zh-sg"
+        "zu"
+      ];
+
+      licenseCost = "gratisCommercialUse";
+
+      styles = [
+        "hei"
+        "sans"
+      ];
+
+      vendor = "tsangertype";
+    };
+  };
 }

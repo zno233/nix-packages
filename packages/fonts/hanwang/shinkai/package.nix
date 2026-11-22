@@ -52,4 +52,49 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "王漢宗鋼筆行楷系列";
+
+      languages = [
+        "bem"
+        "cmn"
+        "fj"
+        "hak"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kwm"
+        "lzh"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "rn"
+        "rw"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-tw"
+        "zu"
+      ];
+
+      licenseCost = "free";
+
+      styles = [
+        "cal"
+        "handwritten"
+        "kai"
+      ];
+
+      vendor = "hanwang";
+    };
+  };
 }

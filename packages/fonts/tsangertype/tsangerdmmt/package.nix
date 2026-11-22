@@ -32,7 +32,15 @@ let
 
   meta = {
     description = "Tsanger DMMT font family";
-    homepage = "https://tsanger.cn";
+
+    homepage = [
+      "https://tsanger.cn/product/21"
+      "https://tsanger.cn/product/22"
+      "https://tsanger.cn/product/23"
+      "https://tsanger.cn/product/24"
+      "https://tsanger.cn/product/25"
+    ];
+
     license = licenses.tsangertype-font-license;
 
     longDescription = ''
@@ -79,4 +87,64 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "仓耳大漫漫体";
+
+      languages = [
+        "agr"
+        "bem"
+        "bg"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kum"
+        "kwm"
+        "mhr"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "os"
+        "rn"
+        "ru"
+        "rw"
+        "sel"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-cn"
+        "zh-sg"
+        "zu"
+      ];
+
+      licenseCost = "gratisPersonalUse";
+
+      notices = [
+        {
+          level = "warning";
+
+          text = ''
+            北京仓耳文字技术有限公司版权所有的商业付费字体不建议嵌入式使用，尽管其明确对个人非商业用途进行豁免，但用于个人网站仍然存在风险。
+          '';
+        }
+      ];
+
+      styles = [
+        "art"
+        "serif"
+        "song"
+      ];
+
+      vendor = "tsangertype";
+    };
+  };
 }

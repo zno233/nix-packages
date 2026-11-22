@@ -35,7 +35,18 @@ let
 
   meta = {
     description = "TsangerYunHei font family";
-    homepage = "https://tsanger.cn";
+
+    homepage = [
+      "https://tsanger.cn/product/9"
+      "https://tsanger.cn/product/10"
+      "https://tsanger.cn/product/11"
+      "https://tsanger.cn/product/12"
+      "https://tsanger.cn/product/13"
+      "https://tsanger.cn/product/28"
+      "https://tsanger.cn/product/29"
+      "https://tsanger.cn/product/30"
+    ];
+
     license = licenses.tsangertype-font-license;
 
     longDescription = ''
@@ -88,4 +99,63 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "仓耳云黑";
+
+      languages = [
+        "agr"
+        "bem"
+        "bg"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kum"
+        "kwm"
+        "mhr"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "os"
+        "rn"
+        "ru"
+        "rw"
+        "sel"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-cn"
+        "zh-sg"
+        "zu"
+      ];
+
+      licenseCost = "gratisPersonalUse";
+
+      notices = [
+        {
+          level = "warning";
+
+          text = ''
+            北京仓耳文字技术有限公司版权所有的商业付费字体不建议嵌入式使用，尽管其明确对个人非商业用途进行豁免，但用于个人网站仍然存在风险。
+          '';
+        }
+      ];
+
+      styles = [
+        "hei"
+        "sans"
+      ];
+
+      vendor = "tsangertype";
+    };
+  };
 }

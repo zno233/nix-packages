@@ -32,7 +32,15 @@ let
 
   meta = {
     description = "Tsanger Qiaole font family";
-    homepage = "https://tsanger.cn";
+
+    homepage = [
+      "https://tsanger.cn/product/342"
+      "https://tsanger.cn/product/343"
+      "https://tsanger.cn/product/344"
+      "https://tsanger.cn/product/345"
+      "https://tsanger.cn/product/346"
+    ];
+
     license = licenses.tsangertype-font-license;
 
     longDescription = ''
@@ -79,4 +87,54 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "仓耳巧乐";
+
+      languages = [
+        "agr"
+        "bem"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kwm"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "rn"
+        "rw"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zu"
+      ];
+
+      licenseCost = "gratisPersonalUse";
+
+      notices = [
+        {
+          level = "warning";
+
+          text = ''
+            北京仓耳文字技术有限公司版权所有的商业付费字体不建议嵌入式使用，尽管其明确对个人非商业用途进行豁免，但用于个人网站仍然存在风险。
+          '';
+        }
+      ];
+
+      styles = [
+        "art"
+      ];
+
+      vendor = "tsangertype";
+    };
+  };
 }

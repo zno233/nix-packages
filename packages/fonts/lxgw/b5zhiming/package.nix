@@ -71,4 +71,66 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "Ｂ５緻明體";
+
+      languages = [
+        "bem"
+        "bg"
+        "cmn"
+        "fj"
+        "hak"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kum"
+        "kwm"
+        "lzh"
+        "mhr"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "os"
+        "rn"
+        "ru"
+        "rw"
+        "sel"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-tw"
+        "zu"
+      ];
+
+      licenseCost = "free";
+
+      notices = [
+        {
+          level = "important";
+
+          text = ''
+            嵌入软件、网页或设备并分发本字体时，须遵守 IPA 1.0 的衍生字体再分发条款：提供许可、所需的字体及开发文件，并提供让用户恢复原始 IPA 字体的方法。仅用于 PDF 等文档的显示或打印嵌入适用不同条款。
+          '';
+
+          url = "https://github.com/lxgw/lxgw/blob/main/documents/xizhi_embedding_instructions.md";
+        }
+      ];
+
+      styles = [
+        "serif"
+        "song"
+      ];
+
+      vendor = "lxgw";
+    };
+  };
 }

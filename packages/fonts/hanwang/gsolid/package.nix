@@ -52,4 +52,49 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "王漢宗超黑體俏皮動物系列";
+
+      languages = [
+        "bem"
+        "cmn"
+        "fj"
+        "hak"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kwm"
+        "lzh"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "rn"
+        "rw"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-tw"
+        "zu"
+      ];
+
+      licenseCost = "free";
+
+      styles = [
+        "art"
+        "hei"
+        "sans"
+      ];
+
+      vendor = "hanwang";
+    };
+  };
 }

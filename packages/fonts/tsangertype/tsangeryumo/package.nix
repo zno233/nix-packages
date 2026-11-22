@@ -32,7 +32,15 @@ let
 
   meta = {
     description = "Tsanger YuMo font family";
-    homepage = "https://tsanger.cn";
+
+    homepage = [
+      "https://tsanger.cn/product/189"
+      "https://tsanger.cn/product/190"
+      "https://tsanger.cn/product/191"
+      "https://tsanger.cn/product/192"
+      "https://tsanger.cn/product/193"
+    ];
+
     license = licenses.tsangertype-freefont-license;
 
     longDescription = ''
@@ -79,4 +87,46 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "仓耳与墨";
+
+      languages = [
+        "bem"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kwm"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "rn"
+        "rw"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-cn"
+        "zh-sg"
+        "zu"
+      ];
+
+      licenseCost = "gratisCommercialUse";
+
+      styles = [
+        "hei"
+        "sans"
+      ];
+
+      vendor = "tsangertype";
+    };
+  };
 }

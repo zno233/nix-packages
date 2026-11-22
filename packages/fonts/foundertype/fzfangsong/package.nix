@@ -25,7 +25,7 @@ let
 
   meta = {
     description = "FZFaSong font distributed by FounderType";
-    homepage = "https://www.foundertype.com";
+    homepage = "https://www.foundertype.com/index.php/FontInfo/index/id/128";
     license = licenses.foundertype-commercial-license;
 
     longDescription = ''
@@ -62,4 +62,56 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "方正仿宋";
+
+      languages = [
+        "agr"
+        "bem"
+        "bg"
+        "cmn"
+        "fj"
+        "hak"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kum"
+        "kwm"
+        "lzh"
+        "mhr"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "os"
+        "rn"
+        "ru"
+        "rw"
+        "sel"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-cn"
+        "zh-sg"
+        "zu"
+      ];
+
+      licenseCost = "gratisCommercialUse";
+
+      styles = [
+        "fangsong"
+        "serif"
+      ];
+
+      vendor = "foundertype";
+    };
+  };
 }

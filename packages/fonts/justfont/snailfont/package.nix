@@ -25,7 +25,12 @@ let
 
   meta = {
     description = "Snail Font Bopomofo and Latin display fonts";
-    homepage = "https://justfont.com/justforfun/snail-font";
+
+    homepage = [
+      "https://justfont.com/justforfun/snail-font"
+      "https://github.com/justfont/Snailfont"
+    ];
+
     license = licenses.justfont-snailfont-license;
 
     longDescription = ''
@@ -63,4 +68,64 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "螺體";
+
+      languages = [
+        "aa"
+        "agr"
+        "an"
+        "bem"
+        "br"
+        "ch"
+        "es"
+        "eu"
+        "fil"
+        "fj"
+        "fur"
+        "gl"
+        "ho"
+        "ht"
+        "ia"
+        "id"
+        "ie"
+        "io"
+        "kj"
+        "kw"
+        "kwm"
+        "la"
+        "mg"
+        "ms"
+        "ng"
+        "nhn"
+        "nr"
+        "om"
+        "pap-an"
+        "pap-aw"
+        "rm"
+        "rn"
+        "rw"
+        "sc"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zu"
+      ];
+
+      licenseCost = "gratisCommercialUse";
+
+      styles = [
+        "art"
+      ];
+
+      vendor = "justfont";
+    };
+  };
 }

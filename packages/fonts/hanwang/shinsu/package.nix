@@ -52,4 +52,59 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "王漢宗行書系列";
+
+      languages = [
+        "bem"
+        "cmn"
+        "fj"
+        "hak"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kwm"
+        "lzh"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "rn"
+        "rw"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-tw"
+        "zu"
+      ];
+
+      licenseCost = "free";
+
+      notices = [
+        {
+          level = "caution";
+
+          text = ''
+            文鼎科技与王漢宗字型存在纠纷，应当避免商业使用 hanwangPackages.shinsu 中的如下字体：
+
+            - HanWangShinSuMedium，王漢宗中行書繁，wt071.ttf
+          '';
+        }
+      ];
+
+      styles = [
+        "cal"
+      ];
+
+      vendor = "hanwang";
+    };
+  };
 }

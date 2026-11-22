@@ -102,7 +102,35 @@ let
 
   meta = {
     description = "TsangerXuanSan font family";
-    homepage = "https://tsanger.cn";
+
+    homepage = [
+      "https://tsanger.cn/product/15"
+      "https://tsanger.cn/product/16"
+      "https://tsanger.cn/product/167"
+      "https://tsanger.cn/product/168"
+      "https://tsanger.cn/product/169"
+      "https://tsanger.cn/product/170"
+      "https://tsanger.cn/product/171"
+      "https://tsanger.cn/product/172"
+      "https://tsanger.cn/product/173"
+      "https://tsanger.cn/product/174"
+      "https://tsanger.cn/product/175"
+      "https://tsanger.cn/product/176"
+      "https://tsanger.cn/product/18"
+      "https://tsanger.cn/product/177"
+      "https://tsanger.cn/product/178"
+      "https://tsanger.cn/product/179"
+      "https://tsanger.cn/product/180"
+      "https://tsanger.cn/product/181"
+      "https://tsanger.cn/product/182"
+      "https://tsanger.cn/product/183"
+      "https://tsanger.cn/product/184"
+      "https://tsanger.cn/product/185"
+      "https://tsanger.cn/product/186"
+      "https://tsanger.cn/product/187"
+      "https://tsanger.cn/product/188"
+    ];
+
     license = licenses.tsangertype-font-license;
 
     longDescription = ''
@@ -189,4 +217,67 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "仓耳玄三";
+
+      languages = [
+        "agr"
+        "bem"
+        "bg"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kum"
+        "kwm"
+        "mhr"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "os"
+        "rn"
+        "ru"
+        "rw"
+        "sel"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-cn"
+        "zh-sg"
+        "zu"
+      ];
+
+      licenseCost = "gratisPersonalUse";
+
+      # Upstream blends Kai, Song, and Hei: https://tsanger.cn/51.html
+      notices = [
+        {
+          level = "warning";
+
+          text = ''
+            北京仓耳文字技术有限公司版权所有的商业付费字体不建议嵌入式使用，尽管其明确对个人非商业用途进行豁免，但用于个人网站仍然存在风险。
+          '';
+        }
+      ];
+
+      styles = [
+        "hei"
+        "kai"
+        "sans"
+        "serif"
+        "song"
+      ];
+
+      vendor = "tsangertype";
+    };
+  };
 }

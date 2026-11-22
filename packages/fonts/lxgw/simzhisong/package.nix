@@ -71,4 +71,131 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "新致宋体";
+
+      languages = [
+        "aa"
+        "agr"
+        "an"
+        "ay"
+        "ayc"
+        "bem"
+        "bg"
+        "bi"
+        "br"
+        "ch"
+        "cmn"
+        "co"
+        "da"
+        "de"
+        "en"
+        "es"
+        "et"
+        "eu"
+        "fi"
+        "fil"
+        "fj"
+        "fo"
+        "fr"
+        "fur"
+        "fy"
+        "gd"
+        "gl"
+        "gv"
+        "hak"
+        "ho"
+        "ht"
+        "ia"
+        "id"
+        "ie"
+        "io"
+        "is"
+        "it"
+        "kj"
+        "kum"
+        "kwm"
+        "lb"
+        "li"
+        "lij"
+        "lzh"
+        "mfe"
+        "mg"
+        "mhr"
+        "mjw"
+        "ms"
+        "nan"
+        "nb"
+        "nds"
+        "ng"
+        "nhn"
+        "niu"
+        "nl"
+        "nn"
+        "no"
+        "nr"
+        "nso"
+        "oc"
+        "om"
+        "os"
+        "pap-an"
+        "pap-aw"
+        "pt"
+        "rm"
+        "rn"
+        "ru"
+        "rw"
+        "sc"
+        "sel"
+        "sg"
+        "sma"
+        "smj"
+        "sn"
+        "sq"
+        "ss"
+        "st"
+        "sv"
+        "sw"
+        "tn"
+        "tpi"
+        "ts"
+        "unm"
+        "uz"
+        "vo"
+        "vot"
+        "wa"
+        "wae"
+        "xh"
+        "yap"
+        "yuw"
+        "za"
+        "zh-cn"
+        "zh-sg"
+        "zu"
+      ];
+
+      licenseCost = "free";
+
+      notices = [
+        {
+          level = "important";
+
+          text = ''
+            嵌入软件、网页或设备并分发本字体时，须遵守 IPA 1.0 的衍生字体再分发条款：提供许可、所需的字体及开发文件，并提供让用户恢复原始 IPA 字体的方法。仅用于 PDF 等文档的显示或打印嵌入适用不同条款。
+          '';
+
+          url = "https://github.com/lxgw/lxgw/blob/main/documents/xizhi_embedding_instructions.md";
+        }
+      ];
+
+      styles = [
+        "serif"
+        "song"
+      ];
+
+      vendor = "lxgw";
+    };
+  };
 }

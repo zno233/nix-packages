@@ -32,7 +32,15 @@ let
 
   meta = {
     description = "Tsanger ShuYuanT font family";
-    homepage = "https://tsanger.cn";
+
+    homepage = [
+      "https://tsanger.cn/product/201"
+      "https://tsanger.cn/product/202"
+      "https://tsanger.cn/product/203"
+      "https://tsanger.cn/product/204"
+      "https://tsanger.cn/product/205"
+    ];
+
     license = licenses.tsangertype-freefont-license;
 
     longDescription = ''
@@ -79,4 +87,46 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "仓耳舒圆体";
+
+      languages = [
+        "bem"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kwm"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "rn"
+        "rw"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-cn"
+        "zh-sg"
+        "zu"
+      ];
+
+      licenseCost = "gratisCommercialUse";
+
+      styles = [
+        "rounded"
+        "sans"
+      ];
+
+      vendor = "tsangertype";
+    };
+  };
 }

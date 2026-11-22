@@ -28,10 +28,11 @@ let
       Provides the MiSans Latin static OpenType font family from
       Xiaomi.
 
-      The package uses the MiSans Font Intellectual Property
-      License Agreement and is treated as non-redistributable in
-      this overlay. Do not publish the built font files through a
-      binary cache.
+      The MiSans Font Intellectual Property License Agreement permits
+      distributing applications using unmodified MiSans fonts. Indicate
+      their use in the software and retain the copyright notice and
+      agreement. Standalone font redistribution and binary caches are not
+      permitted.
     '';
 
     maintainers = with maintainers; [ brsvh ];
@@ -71,4 +72,190 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "MiSans Latin";
+      embedding = true;
+
+      languages = [
+        "aa"
+        "af"
+        "agr"
+        "an"
+        "av"
+        "ay"
+        "ayc"
+        "az-az"
+        "be"
+        "bem"
+        "bg"
+        "bi"
+        "bin"
+        "br"
+        "bs"
+        "bua"
+        "ca"
+        "ce"
+        "ch"
+        "co"
+        "crh"
+        "cs"
+        "csb"
+        "cy"
+        "da"
+        "de"
+        "dsb"
+        "el"
+        "en"
+        "eo"
+        "es"
+        "et"
+        "eu"
+        "fi"
+        "fil"
+        "fj"
+        "fo"
+        "fr"
+        "fur"
+        "fy"
+        "gd"
+        "gl"
+        "gn"
+        "gv"
+        "ha"
+        "haw"
+        "ho"
+        "hr"
+        "hsb"
+        "ht"
+        "hu"
+        "ia"
+        "id"
+        "ie"
+        "ig"
+        "ik"
+        "io"
+        "is"
+        "it"
+        "kaa"
+        "ki"
+        "kj"
+        "kk"
+        "kl"
+        "ku-tr"
+        "kum"
+        "kwm"
+        "ky"
+        "la"
+        "lb"
+        "lez"
+        "lg"
+        "li"
+        "lij"
+        "lt"
+        "lv"
+        "mfe"
+        "mg"
+        "mh"
+        "mhr"
+        "miq"
+        "mjw"
+        "mk"
+        "mn-mn"
+        "mo"
+        "ms"
+        "mt"
+        "na"
+        "nb"
+        "nds"
+        "ng"
+        "nhn"
+        "niu"
+        "nl"
+        "nn"
+        "no"
+        "nr"
+        "nso"
+        "ny"
+        "oc"
+        "om"
+        "os"
+        "pap-an"
+        "pap-aw"
+        "pl"
+        "pt"
+        "qu"
+        "quz"
+        "rm"
+        "rn"
+        "ro"
+        "ru"
+        "rw"
+        "sc"
+        "se"
+        "sel"
+        "sg"
+        "sgs"
+        "sk"
+        "sl"
+        "sm"
+        "sma"
+        "smj"
+        "smn"
+        "sms"
+        "sn"
+        "sq"
+        "sr"
+        "ss"
+        "st"
+        "sv"
+        "sw"
+        "szl"
+        "tg"
+        "tk"
+        "tn"
+        "to"
+        "tpi"
+        "tr"
+        "ts"
+        "ty"
+        "tyv"
+        "uk"
+        "unm"
+        "uz"
+        "vo"
+        "vot"
+        "wa"
+        "wae"
+        "wen"
+        "wo"
+        "xh"
+        "yap"
+        "yuw"
+        "za"
+        "zu"
+      ];
+
+      licenseCost = "gratisCommercialUse";
+
+      notices = [
+        {
+          level = "warning";
+
+          text = ''
+            MiSans 允许随应用嵌入使用；须在软件中特别注明使用了 MiSans，并在字体副本中保留版权声明和许可协议。不得改编或二次开发字体，也不得单独分发、出售字体或将字体包上传到二进制缓存。
+          '';
+
+          url = "https://hyperos.mi.com/font-download/MiSans字体知识产权许可协议.pdf";
+        }
+      ];
+
+      styles = [
+        "sans"
+      ];
+
+      vendor = "xiaomi";
+    };
+  };
 }

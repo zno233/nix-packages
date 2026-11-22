@@ -21,7 +21,7 @@ let
 
   meta = {
     description = "TsangerZGFT-Regular font";
-    homepage = "https://tsanger.cn";
+    homepage = "https://tsanger.cn/product/383";
     license = licenses.tsangertype-font-license;
 
     longDescription = ''
@@ -56,4 +56,57 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "仓耳曾国藩体";
+
+      languages = [
+        "agr"
+        "bem"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kwm"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "rn"
+        "rw"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-cn"
+        "zh-sg"
+        "zu"
+      ];
+
+      licenseCost = "gratisPersonalUse";
+
+      notices = [
+        {
+          level = "warning";
+
+          text = ''
+            北京仓耳文字技术有限公司版权所有的商业付费字体不建议嵌入式使用，尽管其明确对个人非商业用途进行豁免，但用于个人网站仍然存在风险。
+          '';
+        }
+      ];
+
+      styles = [
+        "cal"
+        "kai"
+      ];
+
+      vendor = "tsangertype";
+    };
+  };
 }

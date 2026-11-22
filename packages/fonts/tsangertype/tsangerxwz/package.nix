@@ -21,7 +21,7 @@ let
 
   meta = {
     description = "Tsanger XWZ font";
-    homepage = "https://tsanger.cn";
+    homepage = "https://tsanger.cn/product/195";
     license = licenses.tsangertype-freefont-license;
 
     longDescription = ''
@@ -56,4 +56,47 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "仓耳小丸子";
+
+      languages = [
+        "bem"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kwm"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "rn"
+        "rw"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zh-cn"
+        "zh-sg"
+        "zu"
+      ];
+
+      licenseCost = "gratisCommercialUse";
+
+      styles = [
+        "art"
+        "hei"
+        "sans"
+      ];
+
+      vendor = "tsangertype";
+    };
+  };
 }

@@ -34,9 +34,11 @@ let
     longDescription = ''
       Provides the Alimama Agile VF font family.
 
-      Accept the alimama agile Alimama Lingdongti Legal Statement
-      before use. After accepting it, do not redistribute the font
-      files or publish them through a binary cache.
+      The Alimama Agile Legal Statement governs use. The official
+      Alimama FAQ permits app embedding without charging for font use,
+      but excludes trademark registration using the font as logo lettering.
+      Modification and other restrictions in the statement still apply.
+      Standalone font redistribution and binary caches remain disabled.
     '';
 
     maintainers = with maintainers; [ brsvh ];
@@ -67,4 +69,57 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "阿里妈妈灵动体";
+      embedding = true;
+
+      languages = [
+        "bem"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kwm"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "rn"
+        "rw"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zu"
+      ];
+
+      licenseCost = "gratisCommercialUse";
+
+      notices = [
+        {
+          level = "important";
+
+          text = ''
+            官方 FAQ 允许嵌入应用，但不得因字体使用向用户或会员收费，也不得将字体作为标志字用于商标注册或进行二次创作。各自法律声明中的署名、保留声明和转授权等限制仍适用。
+          '';
+
+          url = "https://www.yuque.com/alimama_ai-font/vfse9w/co47p8ge57qsanz2";
+        }
+      ];
+
+      styles = [
+        "sans"
+        "serif"
+      ];
+
+      vendor = "alimama";
+    };
+  };
 }

@@ -72,4 +72,21 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "齊伋體";
+
+      languages = [ ];
+
+      licenseCost = "free";
+
+      styles = [
+        "serif"
+        "song"
+      ];
+
+      vendor = "lingdong";
+    };
+  };
 }

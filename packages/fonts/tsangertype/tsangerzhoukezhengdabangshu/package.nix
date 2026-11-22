@@ -21,7 +21,7 @@ let
 
   meta = {
     description = "Tsanger Zhouke Zhengdabangshu font";
-    homepage = "https://tsanger.cn";
+    homepage = "https://tsanger.cn/product/194";
     license = licenses.tsangertype-freefont-license;
 
     longDescription = ''
@@ -56,4 +56,43 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "仓耳周珂正大榜书";
+
+      languages = [
+        "bem"
+        "fj"
+        "ho"
+        "ia"
+        "io"
+        "kj"
+        "kwm"
+        "ms"
+        "ng"
+        "nr"
+        "om"
+        "rn"
+        "rw"
+        "sn"
+        "ss"
+        "st"
+        "sw"
+        "ts"
+        "uz"
+        "xh"
+        "za"
+        "zu"
+      ];
+
+      licenseCost = "gratisCommercialUse";
+
+      styles = [
+        "cal"
+      ];
+
+      vendor = "tsangertype";
+    };
+  };
 }

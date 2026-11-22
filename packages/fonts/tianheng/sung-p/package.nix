@@ -21,7 +21,7 @@ let
 
   meta = {
     description = "TH-Sung-P Biaosong font from TianHeng fonts";
-    homepage = "http://cheonhyeong.com";
+    homepage = "http://cheonhyeong.com/Simplified/download.html";
     license = licenses.tianheng-font-license;
 
     longDescription = ''
@@ -67,4 +67,206 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "天珩字库-标宋";
+
+      languages = [
+        "aa"
+        "ab"
+        "af"
+        "agr"
+        "ak"
+        "an"
+        "ast"
+        "av"
+        "ay"
+        "ayc"
+        "az-az"
+        "ba"
+        "be"
+        "bem"
+        "ber-dz"
+        "bg"
+        "bi"
+        "bin"
+        "bm"
+        "br"
+        "bua"
+        "ca"
+        "ce"
+        "ch"
+        "chm"
+        "cmn"
+        "crh"
+        "csb"
+        "cu"
+        "cv"
+        "da"
+        "de"
+        "el"
+        "en"
+        "eo"
+        "es"
+        "eu"
+        "fat"
+        "ff"
+        "fil"
+        "fj"
+        "fo"
+        "fur"
+        "fy"
+        "ga"
+        "gd"
+        "gl"
+        "gn"
+        "gv"
+        "ha"
+        "hak"
+        "haw"
+        "ho"
+        "ht"
+        "hu"
+        "hz"
+        "ia"
+        "id"
+        "ie"
+        "ig"
+        "ik"
+        "io"
+        "is"
+        "it"
+        "ja"
+        "kaa"
+        "kab"
+        "ki"
+        "kj"
+        "kk"
+        "kl"
+        "kr"
+        "ku-am"
+        "ku-tr"
+        "kum"
+        "kv"
+        "kw"
+        "kwm"
+        "ky"
+        "la"
+        "lb"
+        "lez"
+        "lg"
+        "li"
+        "lij"
+        "ln"
+        "lzh"
+        "mg"
+        "mh"
+        "mhr"
+        "mi"
+        "miq"
+        "mjw"
+        "mk"
+        "mn-mn"
+        "mo"
+        "ms"
+        "mt"
+        "na"
+        "nan"
+        "nb"
+        "nds"
+        "ng"
+        "nhn"
+        "niu"
+        "nl"
+        "nn"
+        "no"
+        "nr"
+        "nv"
+        "ny"
+        "oc"
+        "om"
+        "os"
+        "pap-an"
+        "pap-aw"
+        "pl"
+        "pt"
+        "qu"
+        "quz"
+        "rif"
+        "rm"
+        "rn"
+        "ro"
+        "ru"
+        "rw"
+        "sah"
+        "sc"
+        "sco"
+        "sel"
+        "sg"
+        "shs"
+        "sm"
+        "sma"
+        "smj"
+        "sn"
+        "sq"
+        "sr"
+        "ss"
+        "st"
+        "sv"
+        "sw"
+        "szl"
+        "tg"
+        "tk"
+        "to"
+        "tpi"
+        "tr"
+        "ts"
+        "tt"
+        "tw"
+        "ty"
+        "tyv"
+        "uk"
+        "unm"
+        "uz"
+        "ve"
+        "vi"
+        "vo"
+        "wa"
+        "wae"
+        "wo"
+        "xh"
+        "yap"
+        "yo"
+        "yuw"
+        "za"
+        "zh-sg"
+        "zh-tw"
+        "zu"
+      ];
+
+      licenseCost = "gratisPersonalUse";
+
+      notices = [
+        {
+          level = "caution";
+
+          text = ''
+            天珩字库中字体的字形来自中易、华康、Iwata、Besta、方正等公司，其字体使用必须用于非盈利、学习研究的用途。
+
+            其具体的版权问题比较复杂，建议仅做本地屏显补字用途。
+          '';
+
+          url = "http://cheonhyeong.com/Simplified/download.html";
+        }
+      ];
+
+      styles = [
+        "serif"
+        "song"
+      ];
+
+      vendor = "tianheng";
+    };
+  };
 }

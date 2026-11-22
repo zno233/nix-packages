@@ -22,7 +22,12 @@ let
 
   meta = {
     description = "Maru Buri Korean serif font family";
-    homepage = "https://hangeul.naver.com/font";
+
+    homepage = [
+      "https://hangeul.naver.com/maruproject_11"
+      "https://hangeul.naver.com/fonts/search?f=maru"
+    ];
+
     license = licenses.ofl;
 
     longDescription = ''
@@ -64,4 +69,136 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "마루 부리";
+
+      languages = [
+        "aa"
+        "agr"
+        "an"
+        "ay"
+        "ayc"
+        "bem"
+        "bi"
+        "br"
+        "bs"
+        "ca"
+        "ch"
+        "co"
+        "crh"
+        "cs"
+        "csb"
+        "cy"
+        "da"
+        "de"
+        "dsb"
+        "en"
+        "es"
+        "et"
+        "eu"
+        "fi"
+        "fil"
+        "fj"
+        "fo"
+        "fr"
+        "fur"
+        "fy"
+        "gd"
+        "gl"
+        "gv"
+        "ho"
+        "hr"
+        "hsb"
+        "ht"
+        "hu"
+        "ia"
+        "id"
+        "ie"
+        "io"
+        "is"
+        "it"
+        "kj"
+        "ko"
+        "ku-tr"
+        "kwm"
+        "lb"
+        "lg"
+        "li"
+        "lij"
+        "lt"
+        "lv"
+        "mfe"
+        "mg"
+        "mh"
+        "mjw"
+        "ms"
+        "mt"
+        "nb"
+        "nds"
+        "ng"
+        "nhn"
+        "niu"
+        "nl"
+        "nn"
+        "no"
+        "nr"
+        "nso"
+        "ny"
+        "oc"
+        "om"
+        "pap-an"
+        "pap-aw"
+        "pl"
+        "pt"
+        "rm"
+        "rn"
+        "ro"
+        "rw"
+        "sc"
+        "se"
+        "sg"
+        "sgs"
+        "sk"
+        "sl"
+        "sma"
+        "smj"
+        "smn"
+        "sn"
+        "sq"
+        "ss"
+        "st"
+        "sv"
+        "sw"
+        "tk"
+        "tn"
+        "tpi"
+        "tr"
+        "ts"
+        "unm"
+        "uz"
+        "vo"
+        "vot"
+        "wa"
+        "wae"
+        "wen"
+        "wo"
+        "xh"
+        "yap"
+        "yuw"
+        "za"
+        "zu"
+      ];
+
+      licenseCost = "free";
+
+      styles = [
+        "serif"
+        "song"
+      ];
+
+      vendor = "naver";
+    };
+  };
 }

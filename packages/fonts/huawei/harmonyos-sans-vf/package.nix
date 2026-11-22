@@ -21,7 +21,12 @@ let
 
   meta = {
     description = "HarmonyOS Sans variable font family";
-    homepage = "https://developer.huawei.com/consumer/en/design/resource/";
+
+    homepage = [
+      "https://developer.huawei.com/consumer/en/doc/design-guides/font-0000001828772001"
+      "https://developer.huawei.com/consumer/en/design/resource/"
+    ];
+
     license = licenses.harmonyos-sans-fonts-license;
 
     longDescription = ''
@@ -29,9 +34,10 @@ let
       HarmonyOS Sans Condensed Italic, and HarmonyOS Sans Italic
       variable TrueType font families from Huawei Device.
 
-      The package uses the HarmonyOS Sans Fonts License Agreement
-      and is treated as non-redistributable in this overlay. Do not
-      publish the built font files through a binary cache.
+      The HarmonyOS Sans Fonts License Agreement permits embedding
+      unmodified fonts in software other than font software, with prominent
+      attribution and retained copyright and license notices. Standalone
+      redistribution, including through a binary cache, is not permitted.
     '';
 
     maintainers = with maintainers; [ brsvh ];
@@ -65,4 +71,185 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "HarmonyOS Sans VF";
+      embedding = true;
+
+      languages = [
+        "aa"
+        "af"
+        "agr"
+        "an"
+        "av"
+        "ay"
+        "ayc"
+        "az-az"
+        "be"
+        "bem"
+        "bg"
+        "bi"
+        "bin"
+        "br"
+        "bs"
+        "bua"
+        "ca"
+        "ce"
+        "ch"
+        "co"
+        "crh"
+        "cs"
+        "csb"
+        "cy"
+        "da"
+        "de"
+        "dsb"
+        "el"
+        "en"
+        "eo"
+        "es"
+        "et"
+        "eu"
+        "fi"
+        "fil"
+        "fj"
+        "fo"
+        "fr"
+        "fur"
+        "fy"
+        "gd"
+        "gl"
+        "gn"
+        "gv"
+        "haw"
+        "ho"
+        "hr"
+        "hsb"
+        "ht"
+        "hu"
+        "ia"
+        "id"
+        "ie"
+        "ig"
+        "ik"
+        "io"
+        "is"
+        "it"
+        "kaa"
+        "ki"
+        "kj"
+        "kk"
+        "kl"
+        "ku-tr"
+        "kum"
+        "kwm"
+        "ky"
+        "la"
+        "lb"
+        "lez"
+        "lg"
+        "li"
+        "lij"
+        "lt"
+        "lv"
+        "mfe"
+        "mg"
+        "mh"
+        "mhr"
+        "miq"
+        "mjw"
+        "mk"
+        "mn-mn"
+        "mo"
+        "ms"
+        "mt"
+        "na"
+        "nb"
+        "nds"
+        "ng"
+        "nhn"
+        "niu"
+        "nl"
+        "nn"
+        "no"
+        "nr"
+        "nso"
+        "ny"
+        "oc"
+        "om"
+        "os"
+        "pap-an"
+        "pap-aw"
+        "pl"
+        "pt"
+        "rm"
+        "rn"
+        "ro"
+        "ru"
+        "rw"
+        "sc"
+        "se"
+        "sel"
+        "sg"
+        "sgs"
+        "sk"
+        "sl"
+        "sm"
+        "sma"
+        "smj"
+        "smn"
+        "sn"
+        "sq"
+        "sr"
+        "ss"
+        "st"
+        "sv"
+        "sw"
+        "szl"
+        "tk"
+        "tn"
+        "to"
+        "tpi"
+        "tr"
+        "ts"
+        "ty"
+        "tyv"
+        "uk"
+        "unm"
+        "uz"
+        "vo"
+        "vot"
+        "wa"
+        "wae"
+        "wen"
+        "wo"
+        "xh"
+        "yap"
+        "yuw"
+        "za"
+        "zu"
+      ];
+
+      licenseCost = "gratisCommercialUse";
+
+      notices = [
+        {
+          level = "warning";
+
+          text = ''
+            HarmonyOS Sans 允许将未修改的字体嵌入或捆绑在字体软件以外的软件中；须在软件中显著注明使用了该字体，并保留版权声明与许可协议。不得修改字体、单独分发或出售字体，也不得将字体包上传到二进制缓存。
+          '';
+
+          url = "https://raw.gitcode.com/openharmony/global_system_resources/raw/a52632e5d3901cc860b87fe923142077de194b42/LICENSE_Fonts";
+        }
+      ];
+
+      styles = [
+        "sans"
+      ];
+
+      vendor = "huawei";
+    };
+  };
 }

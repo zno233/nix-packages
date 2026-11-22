@@ -20,7 +20,12 @@ let
 
   meta = {
     description = "AbbrFesFont Traditional Chinese abbreviation font";
-    homepage = "https://justfont.com/justforfun/abbrfesfont";
+
+    homepage = [
+      "https://justfont.com/justforfun/abbrfesfont"
+      "https://github.com/justfont/AbbrFesFont"
+    ];
+
     license = licenses.ofl;
 
     longDescription = ''
@@ -54,4 +59,91 @@ stdenvNoCC.mkDerivation {
 
     runHook postInstall
   '';
+
+  passthru = {
+    chinese-fonts-overlay-site = {
+      displayName = "簡語生活體";
+
+      languages = [
+        "aa"
+        "agr"
+        "an"
+        "ay"
+        "ayc"
+        "bem"
+        "bi"
+        "br"
+        "bs"
+        "ch"
+        "cy"
+        "eo"
+        "es"
+        "et"
+        "eu"
+        "fi"
+        "fil"
+        "fj"
+        "fur"
+        "gl"
+        "ho"
+        "hr"
+        "ht"
+        "hu"
+        "ia"
+        "id"
+        "ie"
+        "io"
+        "it"
+        "ki"
+        "kj"
+        "kw"
+        "kwm"
+        "la"
+        "li"
+        "mg"
+        "ms"
+        "na"
+        "ng"
+        "nhn"
+        "nl"
+        "nr"
+        "nso"
+        "ny"
+        "om"
+        "pap-an"
+        "pap-aw"
+        "rm"
+        "rn"
+        "rw"
+        "sc"
+        "sg"
+        "sl"
+        "sma"
+        "smj"
+        "sn"
+        "ss"
+        "st"
+        "sv"
+        "sw"
+        "tn"
+        "ts"
+        "ty"
+        "uz"
+        "vo"
+        "vot"
+        "xh"
+        "yap"
+        "za"
+        "zu"
+      ];
+
+      licenseCost = "free";
+
+      styles = [
+        "handwritten"
+      ];
+
+      vendor = "justfont";
+    };
+  };
 }
