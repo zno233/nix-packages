@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - uses: cachix/install-nix-action@v31.11.3
+      - uses: cachix/install-nix-action@v31.11.5
         with:
           # Nix 2.35 copies flake sources to the store lazily, so the
           # /nix/store/...-source path nix-update reads from `nix flake
