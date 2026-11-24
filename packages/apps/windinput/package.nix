@@ -38,13 +38,13 @@ let
   };
 
   hashes = {
-    x86_64-linux = "sha256-ey8OKG5LW3yBWkaqvVXwF7lrVpB3pN8q15HEjJB6CBk=";
-    aarch64-linux = "sha256-4phZKvRd2HEmASLWcEIE7d7hXeh42zDzu6g8FMnhFiA=";
+    x86_64-linux = "sha256-P8lERK5KRzhU8sF9di/TwMrGf1Z+IgZxVLIckwsmr20=";
+    aarch64-linux = "sha256-23O3Xhjid6u3eLetyFh0UMyNd6l98NYQK3xRGjYMd9c=";
   };
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "windinput";
-  version = "0.132.0";
+  version = "0.133.0";
 
   src = fetchurl {
     # Canonical GitHub release first, then the link published on
