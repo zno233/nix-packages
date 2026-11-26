@@ -32,13 +32,13 @@ let
   };
   # refreshed by tools/update-pins — do not edit by hand!
   hashes = {
-    x86_64-linux = "sha256-l21KuF2dVCe/r9kPNQy553UeqnRDVPFnxqUpxjtWzr0=";
-    aarch64-linux = "sha256-37ZXxbEHrN2y719vDgQsgwHhCmw3PP8Ux8EtOSWJj78=";
+    x86_64-linux = "sha256-fUgSvtdMqqaXAvtnHuZ4/I02mMrau4DcMy77S1FNgF0=";
+    aarch64-linux = "sha256-UKOP4+/BmOkJgyI7jCxQx956EAatUcTRb8H8h8eY9bg=";
   };
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "venera-next";
-  version = "1.18.4";
+  version = "1.18.5";
 
   src = fetchurl {
     url = "https://github.com/CyrilPeng/Venera-Next/releases/download/v${finalAttrs.version}/venera-next_${finalAttrs.version}_${
