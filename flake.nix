@@ -53,19 +53,6 @@
       # set stays defined in one place.
       eachSystem = f: lib.mapAttrs (system: pkgs: f system pkgs) pkgsFor;
 
-      # nix-update 1.16.0 evaluates the flake through the store path
-      # reported by `nix flake metadata`, which Nix >= 2.35 no longer
-      # copies eagerly. nix-update also puts its own `nix` on PATH, so
-      # pinning the workflow's Nix is not enough: override the `nix` it
-      # bundles as well. TODO: drop once
-      # https://github.com/Mic92/nix-update/issues/687 is fixed.
-      nixUpdateFor = eachSystem (
-        _: pkgs:
-        pkgs.nix-update.override {
-          nix = pkgs.nixVersions.nix_2_34;
-        }
-      );
-
       # Local applications are discovered by the logic shared with the
       # overlay (overlays/apps.nix): the same flatten, including the honk
       # variant re-exports; new apps still need no flake.nix edit.
@@ -171,7 +158,7 @@
         system: pkgs: {
           nix-update = {
             type = "app";
-            program = "${nixUpdateFor.${system}}/bin/nix-update";
+            program = "${pkgs.nix-update}/bin/nix-update";
           };
           shellcheck = {
             type = "app";
@@ -195,12 +182,12 @@
               with pkgs;
               [
                 deadnix
+                nix-update
                 nixfmt-tree
                 python3
                 shellcheck
                 statix
-              ]
-              ++ [ nixUpdateFor.${system} ];
+              ];
           };
         }
       );

@@ -21,12 +21,6 @@ jobs:
 
       - uses: cachix/install-nix-action@v31.11.3
         with:
-          # Nix 2.35 copies flake sources to the store lazily, so the
-          # /nix/store/...-source path nix-update reads from `nix flake
-          # metadata` may not exist when it evaluates the flake.
-          # TODO: remove this pin once
-          # https://github.com/Mic92/nix-update/issues/687 is fixed.
-          install_url: https://releases.nixos.org/nix/nix-2.34.9/install
           extra_nix_config: |
             accept-flake-config = false
             builders =
