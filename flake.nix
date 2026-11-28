@@ -155,7 +155,7 @@
       # Tools the workflows drive; app refs pin them to this flake's
       # locked nixpkgs instead of the mutable registry.
       apps = eachSystem (
-        system: pkgs: {
+        _: pkgs: {
           nix-update = {
             type = "app";
             program = "${pkgs.nix-update}/bin/nix-update";
@@ -176,7 +176,7 @@
       );
 
       devShells = eachSystem (
-        system: pkgs: {
+        _: pkgs: {
           default = pkgs.mkShell {
             packages = with pkgs; [
               deadnix
