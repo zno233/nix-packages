@@ -178,16 +178,14 @@
       devShells = eachSystem (
         system: pkgs: {
           default = pkgs.mkShell {
-            packages =
-              with pkgs;
-              [
-                deadnix
-                nix-update
-                nixfmt-tree
-                python3
-                shellcheck
-                statix
-              ];
+            packages = with pkgs; [
+              deadnix
+              nix-update
+              nixfmt-tree
+              python3
+              shellcheck
+              statix
+            ];
           };
         }
       );
