@@ -7,11 +7,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "doona";
-  version = "0.1.0-rc.7";
+  version = "0.1.0-rc.8";
 
   src = fetchurl {
     url = "https://github.com/Zakkaus/doona/releases/download/v${finalAttrs.version}/doona-${finalAttrs.version}.tar.gz";
-    hash = "sha256-Xlm+9HDHCxzdMEshH/HhJ/ghbqRZk89Owh07f272MOM=";
+    hash = "sha256-c/y818/rXD4Q4svwO3CRH4s66b+8NzddcorHcHYPGdw=";
   };
 
   sourceRoot = ".";
